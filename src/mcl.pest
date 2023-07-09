@@ -1,0 +1,476 @@
+//
+// mcl
+// Author: jam
+//
+
+ident = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+mc_ident = @{ (ASCII_ALPHANUMERIC | "_" | "." | "-" | ASCII_DIGIT ){,32} }
+
+resource = @{ "#"? ~ (ident ~ ":")? ~ (mc_ident ~ "/")* ~ mc_ident }
+
+simple_name = @{ ASCII_ALPHANUMERIC+ }
+player_name = @{ !"@" ~ ASCII+ }
+partial_selector = @{ ("@" ~ ("p" | "r" | "e" | "s" | "a")) | player_name+}
+
+coordinate = { ("~"? ~ float){3} | ("^"? ~ float){3} }
+rotation = { ("~"? ~ float){2} }
+
+gamemode = { "survival" | "creative" | "spectator" | "adventure" }
+sort = { "nearest" | "farthest" | "random" | "arbitrary" }
+
+//// Literals
+
+udecumal = @{ ((ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT*)?) | (ASCII_DIGIT* ~ "." ~ ASCII_DIGIT+))}
+decimal = @{ "-"? ~ udecumal}
+float = @{ decimal ~ ^"f"?}
+double = @{ decimal ~ ^"d"?}
+uint = @{ ASCII_DIGIT+ }
+int = @{ "-"? ~ uint }
+byte = @{ int ~ ^"b" }
+short = @{ int ~ ^"s" }
+long = @{ int ~ ^"l" }
+bool = { "true" | "false" }
+string = ${ "\"" ~ str_inner ~ "\"" }
+    str_inner = @{ char* }
+char = {
+    !("\"" | "\\") ~ ANY
+    | "\\" ~ ("\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t")
+}
+primitives = { "int" | "float" | "short" | "long" | "double" | "byte" }
+uuid = @{ ASCII_HEX_DIGIT{8} ~ "-" ~ (ASCII_HEX_DIGIT{4} ~ "-"){3} ~ ASCII_HEX_DIGIT{12} }
+color = { "black" | "blue" | "aqua" | "green" | "red" | "gray" | "light_purple" |
+    "dark_blue" | "dark_aqua" | "dark_green" | "dark_red" | "dark_gray" | "dark_purple" |
+    "white" | "gold" }
+hex_color = @{ "#" ~ ASCII_HEX_DIGIT{6} }
+stack_size = @{ (('1'..'5')? ~ ASCII_DIGIT) | ("6" ~ '0'..'4') }
+
+raw_json_text = { "" }
+    json_text_color = { "\"color\"" ~ ":" ~ q_json_color }
+    json_text_font = { "\"font\"" ~ ":" ~ q_resource }
+    json_text_bold = { "\"bold\"" ~ ":" ~ q_bool }
+    json_text_italic = { "\"italic\"" ~ ":" ~ q_bool }
+    json_text_underlined = { "\"underlined\"" ~ ":" ~ q_bool }
+    json_text_strikethrough = { "\"strikethrough\"" ~ ":" ~ q_bool }
+    json_text_obfuscated = { "\"obfuscated\"" ~ ":" ~ q_bool }
+    json_text_insertion = { "\"insertion\"" ~ ":" ~ string }
+    json_text_click_event = { "\"clickEvent\"" ~ ":" ~ "{" ~
+        "\"action\"" ~ ":" ~ (
+            ("\"open_url\"" ~ "," ~ "\"value\"" ~ ":" ~ string ) |
+            ("\"run_command\"" ~ "," ~ "\"value\"" ~ ":" ~ q_command ) |
+            ("\"suggest_command\"" ~ "," ~ "\"value\"" ~ ":" ~ q_command ) |
+            ("\"change_page\"" ~ "," ~ "\"value\"" ~ ":" ~ q_uint ) |
+            ("\"copy_to_clipboard\"" ~ "," ~ "\"value\"" ~ ":" ~ string )
+        )
+    ~ "}" }
+    json_text_hover_event = {
+        "\"action\"" ~ ":" ~ (
+            ("\"show_text\"" ~ "," ~ (
+                ("\"contents\"" ~ ":" ~ raw_json_text ) |
+                ("\"value\"" ~ ":" ~ raw_json_text )
+            ) ) |
+            ("\"show_item\"" ~ "," ~ (
+                ("\"contents\"" ~ ":" ~ "{" ~
+                    "\"id\"" ~ ":" ~ q_resource ~ "," ~
+                    ("\"count\"" ~ ":" ~ q_uint ~ ",")? ~
+                    ("\"tag\"" ~ ":" ~ escaped_nbt ~ ",")?
+                 ~ "}") |
+                ("\"value\"" ~ ":" ~ q_command)
+            ) ) |
+            ("\"show_entity\"" ~ "," ~ (
+                ("\"contents\"" ~ ":" ~ "{" ~
+                    ("\"name\"" ~ ":" ~ q_resource ~ ",")? ~
+                    "\"type\"" ~ ":" ~ resource ~ "," ~
+                    "\"id\"" ~ ":" ~ escaped_nbt ~ ","
+                 ~ "}") |
+                ("\"value\"" ~ ":" ~ "\"" ~ command ~ "\"")
+            ) )
+        )
+    }
+    q_uint = ${ "\"" ~ uint ~ "\"" }
+    q_bool = ${ "\"" ~ bool ~ "\"" }
+    q_resource = ${ "\"" ~ resource ~ "\"" }
+    q_command = ${ "\"" ~ command ~ "\"" }
+    q_uuid = ${ "\"" ~ uuid ~ "\"" }
+    q_json_color = ${ "\"" ~ (color | hex_color) ~ "\"" }
+    esc_string = ${ "\\\"" ~ str_inner ~ "\\\"" }
+
+
+//// NBT
+nbt_value = { int | float | double | short | byte | string | nbt_array | nbt_object | mc_ident }
+nbt_array = { "[" ~ ("I;" | "B;" | "L;")? ~ (nbt_value ~ ",")* ~ nbt_value? ~ "]" }
+nbt_object = { "{" ~ (kv_pair ~ ",")* ~ kv_pair? ~ "}"}
+    kv_pair = { mc_ident ~ ":" ~ nbt_value }
+nbt = { "{" ~ (nbt_value ~ ",")* ~ nbt_value? ~ "}"}
+
+escaped_nbt_value = { int | float | double | short | byte | esc_string | nbt_array | nbt_object | mc_ident }
+escaped_nbt_array = { "[" ~ ("I;" | "B;" | "L;")? ~ (nbt_value ~ ",")* ~ nbt_value? ~ "]" }
+escaped_nbt_object = { "{" ~ (kv_pair ~ ",")* ~ kv_pair? ~ "}"}
+escaped_nbt = { "\"{" ~ (nbt_value ~ ",")* ~ nbt_value? ~ "}\""}
+
+nbt_path = ${ nbt_path_element ~ (nbt_path_field_access | nbt_path_array_lookup)* ~ "."? }
+    nbt_path_array_lookup = { nbt_path_array_expand | nbt_path_array_index | nbt_path_array_search }
+        nbt_path_array_expand = { ("[]") }
+        nbt_path_array_index = { ("[" ~ int ~ "]") }
+        nbt_path_array_search = { ("[" ~ nbt_object ~ "]") }
+    nbt_path_field_access = { "." ~ nbt_path_element }
+    nbt_path_element = { mc_ident | string }
+
+//// Entity selector
+
+selector_arg_advancements = { "limit" ~ "=" ~ uint }
+selector_arg_distance = { "distance" ~ "=" ~ float_range}
+selector_arg_dx = { "dx" ~ "=" ~ float }
+selector_arg_dy = { "dy" ~ "=" ~ float }
+selector_arg_dz = { "dz" ~ "=" ~ float }
+selector_arg_gamemode = { "gamemode" ~ "=" ~ gamemode }
+selector_arg_level = { "level" ~ "=" ~ uint_range }
+selector_arg_limit = { "limit" ~ "=" ~ uint }
+selector_arg_name = { "name" ~ "=" ~ "!"? ~ player_name }
+// TODO: finish nbt
+selector_arg_nbt = { "nbt" ~ "=" ~ simple_name }
+selector_arg_predicate = { "predicate" ~ "=" ~ resource }
+selector_arg_scores = { "scores" ~ "=" ~ "{" ~ (mc_ident ~ "=" ~ int_range ~ ",")* ~ mc_ident ~ "=" ~ int_range  ~ "}"}
+selector_arg_sort = { "sort" ~ "=" ~ sort }
+selector_arg_tag = { "tag" ~ "=" ~ "!"? ~ mc_ident }
+selector_arg_team = { "team" ~ "=" ~ "!"? ~ mc_ident}
+selector_arg_type = { "type" ~ "=" ~ "!"? ~ resource }
+selector_arg_x = { "x" ~ "=" ~ float }
+selector_arg_x_rotation = { "x_rotation" ~ "=" ~ float_range }
+selector_arg_y = { "y" ~ "=" ~ float }
+selector_arg_y_rotation = { "y_rotation" ~ "=" ~ float_range }
+selector_arg_z = { "z" ~ "=" ~ float }
+selector_arg_z_rotation = { "z_rotation" ~ "=" ~ float_range }
+
+entity_selector_args = { "[" ~ (
+    selector_arg_advancements |
+    selector_arg_distance |
+    selector_arg_dx |
+    selector_arg_dy |
+    selector_arg_dz |
+    selector_arg_gamemode |
+    selector_arg_level |
+    selector_arg_limit |
+    selector_arg_name |
+    selector_arg_nbt |
+    selector_arg_predicate |
+    selector_arg_predicate |
+    selector_arg_scores |
+    selector_arg_sort |
+    selector_arg_tag |
+    selector_arg_team |
+    selector_arg_type |
+    selector_arg_x |
+    selector_arg_x_rotation |
+    selector_arg_y |
+    selector_arg_y_rotation |
+    selector_arg_z |
+    selector_arg_z_rotation
+    ) ~ "]"}
+
+entity_selector = { partial_selector ~ entity_selector_args }
+
+//// Block selector
+
+block_selector = { resource ~ ("[" ~ ident ~ "=" ~ mc_ident ~ "]")? ~ nbt? }
+
+//// Data path
+
+data_path = { ("storage" ~ resource ~ nbt_path) | ("entity" ~ entity_selector ~ nbt_path) | "block" ~ coordinate ~ nbt_path }
+
+op_unary = { "-" | "!" }
+op_binary = { "-" | "+" | "/" | "*" | "%" }
+op_binary_logic = { "&&" | "||" | "^" }
+op_comparison = { "<=" | ">=" | "<" | ">" | "=" }
+
+paren_expr = { "(" ~ expr ~ ")" }
+binary_expr = { expr ~ op_binary ~ expr }
+unary_expr = { op_unary ~ expr }
+fn_call = { ident ~ "(" ~ ((((expr | fn_call) ~ ",")* ~ (expr | fn_call)) | ((expr | fn_call) ~ ",")*) ~ ")" }
+
+expr = { int | float | ident | fn_call | binary_expr | unary_expr | paren_expr }
+
+
+assignment = { ident ~ "=" ~ expr}
+
+uint_range = { (uint ~ (".." ~ uint?)?) | (".." ~ uint)}
+int_range = { (int ~ (".." ~ int?)?) | (".." ~ int)}
+float_range = { (float ~ (".." ~ float?)?) | (".." ~ float)}
+
+score = { entity_selector ~ mc_ident }
+
+//// Execute
+
+// subcommands
+
+condition_biome = { "biome" ~ coordinate ~ resource }
+condition_block = { "block" ~ coordinate ~ block_selector }
+condition_blocks = { "blocks" ~ coordinate ~ coordinate ~ coordinate ~ blocks_filters }
+    blocks_filters = { "all" | "masked" }
+condition_data = { "data" ~ data_path }
+condition_dimension = { "dimension" ~ resource }
+condition_entity = { "entity" ~ entity_selector }
+condition_loaded = { "loaded" ~ coordinate }
+condition_predicate = { "predicate" ~ resource }
+condition_score = { "score" ~ score ~ (("matches" ~ int_range) | (op_comparison ~ score))}
+
+execute_align = { "align" ~ axes }
+    axes = @{ ("x" | "y" | "z"){,3} }
+execute_anchored = { "anchored" ~ anchors }
+    anchors = { "eyes" | "feet" }
+execute_as = { "as" ~ entity_selector }
+execute_at = { "at" ~ entity_selector }
+execute_facing = { "facing" ~ ( ("entity" ~ entity_selector ~ anchors ) | coordinate) }
+execute_if_unless = { ("if" | "unless") ~ (
+    condition_biome |
+    condition_block |
+    condition_blocks |
+    condition_data |
+    condition_dimension |
+    condition_entity |
+    condition_loaded |
+    condition_predicate |
+    condition_score
+) }
+execute_in = { "in" ~ resource }
+execute_on = { "on" ~ on_target }
+    on_target = { "attacker" | "controller" | "leasher" | "origin" | "owner" | "passengers" | "target" | "vehicle" }
+execute_positioned = { "positioned" ~ (coordinate | ("as" ~ entity_selector) | ("over" ~ positioned_over_options)) }
+    positioned_over_options = { "motion_blocking" | "motion_blocking_no_leaves" | "ocean_floor" | "world_surface" }
+execute_rotated = { "rotated" ~ (rotation | ("as" ~ entity_selector)) }
+execute_run = { "run" }
+execute_store = { "store" ~ execute_store_modes ~ (
+    ("block" ~ coordinate ~ execute_store_destination ) |
+    ("bossbar" ~ mc_ident ~ ("value" | "max") ) |
+    ("entity" ~ entity_selector ~ execute_store_destination ) |
+    ("score" ~ score ) |
+    ("storage" ~ resource ~ execute_store_destination )
+)}
+    execute_store_modes = { "result" | "success" }
+    execute_store_destination = { nbt_path ~ primitives ~ int }
+execute_summon = { "summon" ~ resource }
+
+execute_subcommands = {
+    execute_align |
+    execute_anchored |
+    execute_as |
+    execute_at |
+    execute_facing |
+    execute_if_unless |
+    execute_in |
+    execute_on |
+    execute_positioned |
+    execute_rotated |
+    execute_store |
+    execute_summon
+}
+
+
+//// Vanilla Commands
+cmd_advancement = { "advancement" ~ ("grant" | "revoke") ~ entity_selector ~ (
+    "everything" | (
+        (
+            "from" |
+            "through" |
+            "until"
+        ) ~ resource
+    ) | (
+        "only" ~ resource ~ mc_ident
+    )
+
+) }
+cmd_attribute = { "attribute" ~ entity_selector ~ resource ~ (
+    ("base" ~ ("get" | "set") ~ int?) |
+    ("get" ~ int?) |
+    ("modifier" ~ (
+        ("add" ~ uuid ~ mc_ident ~ decimal ~ attribute_modifier) |
+        ("remove" ~ uuid) |
+        ("value" ~ "get" ~ uuid ~ int?)
+    ))
+) }
+    attribute_modifier = { "add" | "multiply" | "multiply_base" }
+cmd_ban = { "ban" ~ entity_selector }
+cmd_ban_ip = {"ban-ip"}
+cmd_banlist = {"banlist"}
+cmd_bossbar = {"bossbar" ~ (
+    ("add" ~ resource ~ mc_ident) |
+    ("set" ~ mc_ident ~ (
+        ("color" ~ ("blue" | "green" | "pink" | "purple" | "red" | "white" | "yellow")) |
+        ("max" ~ uint) |
+        ("name") |
+        ("players") |
+        ("style") |
+        ("value") |
+        ("visible")
+    )) |
+    ("remove") |
+    ("list") |
+    ("get")
+)}
+
+cmd_clear = {"clear"}
+cmd_clone = {"clone" ~ coordinate ~ coordinate ~ coordinate}
+cmd_damage = {"damage" ~ entity_selector ~ udecumal ~ (resource ~ ("at" | "by")?)? }
+cmd_data = {"data" ~ ("get" | "modify" | "merge") }
+cmd_datapack = {"datapack"}
+cmd_debug = {"debug"}
+cmd_defaultgamemode = {"defaultgamemode"}
+cmd_deop = {"deop"}
+cmd_difficulty = {"difficulty"}
+cmd_effect = {"effect"}
+cmd_enchant = {"enchant"}
+cmd_execute = {"execute" ~ execute_subcommands* ~ ("run" ~ command)?}
+cmd_experience = {""}
+cmd_fill = {"fill" ~ coordinate ~ coordinate ~ block_selector ~ (
+    "destroy" |
+    "hollow" |
+    "keep" |
+    "outline" |
+    ("replace" ~ block_selector?)
+)? }
+cmd_fillbiome = {""}
+cmd_forceload = {""}
+cmd_function = {"function" ~ resource}
+cmd_gamemode = {"gamemode" ~ gamemode}
+cmd_gamerule = {""}
+cmd_give = {"give" ~ entity_selector ~ resource ~ nbt? ~ uint}
+cmd_help = {""}
+cmd_item = {""}
+cmd_jfr = {""}
+cmd_kick = {""}
+cmd_kill = {"kill" ~ entity_selector}
+cmd_list = {""}
+cmd_locate = {""}
+cmd_loot = {""}
+cmd_me = {""}
+cmd_msg = {"msg" ~ entity_selector ~ literal_text}
+    literal_text = @{ASCII+}
+cmd_op = {""}
+cmd_pardon = {""}
+cmd_pardon_ip = {""}
+cmd_particle = {""}
+cmd_perf = {""}
+cmd_place = {""}
+cmd_playsound = {""}
+cmd_publish = {""}
+cmd_recipe = {""}
+cmd_reload = {""}
+cmd_return = {"return" ~ int}
+cmd_ride = {"ride" ~ entity_selector ~ ("dismount" | ("mount" ~ entity_selector))}
+cmd_save_all = {""}
+cmd_save_off = {""}
+cmd_save_on = {""}
+cmd_say = {""}
+cmd_schedule = {""}
+cmd_scoreboard = {""}
+cmd_seed = {""}
+cmd_setblock = {""}
+cmd_setidletimeout = {""}
+cmd_setworldspawn = {""}
+cmd_spawnpoint = {""}
+cmd_spectate = {""}
+cmd_spreadplayers = {""}
+cmd_stop = {""}
+cmd_stopsound = {""}
+cmd_summon = {""}
+cmd_tag = {""}
+cmd_team = {""}
+cmd_teammsg = {""}
+cmd_teleport = {""}
+cmd_tell = {""}
+cmd_tellraw = {""}
+cmd_time = {""}
+cmd_title = {""}
+cmd_tm = {""}
+cmd_tp = {""}
+cmd_trigger = {""}
+cmd_w = {""}
+cmd_weather = {""}
+cmd_whitelist = {""}
+cmd_worldborder = {""}
+cmd_xp = {""}
+
+command = {
+    cmd_advancement |
+    cmd_attribute |
+    cmd_ban |
+    cmd_ban_ip |
+    cmd_banlist |
+    cmd_bossbar |
+    cmd_clear |
+    cmd_clone |
+    cmd_damage |
+    cmd_data |
+    cmd_datapack |
+    cmd_debug |
+    cmd_defaultgamemode |
+    cmd_deop |
+    cmd_difficulty |
+    cmd_effect |
+    cmd_enchant |
+    cmd_execute |
+    cmd_experience |
+    cmd_fill |
+    cmd_fillbiome |
+    cmd_forceload |
+    cmd_function |
+    cmd_gamemode |
+    cmd_gamerule |
+    cmd_give |
+    cmd_help |
+    cmd_item |
+    cmd_jfr |
+    cmd_kick |
+    cmd_kill |
+    cmd_list |
+    cmd_locate |
+    cmd_loot |
+    cmd_me |
+    cmd_msg |
+    cmd_op |
+    cmd_pardon |
+    cmd_pardon_ip |
+    cmd_particle |
+    cmd_perf |
+    cmd_place |
+    cmd_playsound |
+    cmd_publish |
+    cmd_recipe |
+    cmd_reload |
+    cmd_return |
+    cmd_ride |
+    cmd_save_all |
+    cmd_save_off |
+    cmd_save_on |
+    cmd_say |
+    cmd_schedule |
+    cmd_scoreboard |
+    cmd_seed |
+    cmd_setblock |
+    cmd_setidletimeout |
+    cmd_setworldspawn |
+    cmd_spawnpoint |
+    cmd_spectate |
+    cmd_spreadplayers |
+    cmd_stop |
+    cmd_stopsound |
+    cmd_summon |
+    cmd_tag |
+    cmd_team |
+    cmd_teammsg |
+    cmd_teleport |
+    cmd_tell |
+    cmd_tellraw |
+    cmd_time |
+    cmd_title |
+    cmd_tm |
+    cmd_tp |
+    cmd_trigger |
+    cmd_w |
+    cmd_weather |
+    cmd_whitelist |
+    cmd_worldborder |
+    cmd_xp
+}
+
+
+WHITESPACE = { " " }
