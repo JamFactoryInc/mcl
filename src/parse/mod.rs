@@ -1,6 +1,10 @@
 pub mod unicode;
 
-use std::fmt::{Display, format};
+use std::fmt::{Display};
+use derive_more::Display;
+use translate::bytecode::Instr;
+use util::RawString;
+use vm::LayoutContext;
 use crate::src_in::Source;
 
 pub struct ParsedExpression {
@@ -40,12 +44,9 @@ impl ParseError {
     }
 }
 
-pub trait Parser<T : Display> {
-    fn get_error(&self, src: &mut Source) -> ParseError;
-    fn get_suggestions(&self, partial: &str) -> Vec<Suggestion>;
-    fn parse(&self, src: &mut Source) -> Option<T>;
-
-    fn repeat<F>(predicate: F, src: &mut Source) -> Vec<u8>
+pub struct Matchers {}
+impl Matchers {
+    pub fn repeat<F>(predicate: F, src: &mut Source) -> RawString
         where F: Fn(u8) -> bool {
         let mut vec = Vec::new();
 
@@ -53,8 +54,14 @@ pub trait Parser<T : Display> {
             vec.push(src.next().unwrap());
         }
 
-        return vec;
+        RawString::from(vec)
     }
+}
+
+pub trait Parser<T = Self> where T: Display {
+    fn get_error(&self, src: &mut Source) -> ParseError;
+    fn get_suggestions(&self, partial: &[u8]) -> Vec<Suggestion>;
+    fn parse(&self, src: &mut Source, context: &mut LayoutContext);
 }
 
 pub struct LiteralParser {
@@ -62,42 +69,44 @@ pub struct LiteralParser {
     options: Vec<Vec<u8>>,
 }
 
+#[derive(Display, Clone, Copy)]
 pub enum Wow {
     One,
     Two,
 }
-impl Parser<Wow> for LiteralParser {
-    fn get_error(&self, src: &Source) -> ParseError {
+impl Parser for Wow {
+    fn get_error(&self, _: &mut Source) -> ParseError {
         todo!()
     }
 
-    fn get_suggestions(&self, partial: &str) -> Vec<Wow> {
+    fn get_suggestions(&self, _: &[u8]) -> Vec<Suggestion> {
         todo!()
     }
 
     // todo: refactor this to use a proc macro so we can do pre-computed logic instead of array garbage
-    fn parse(&self, src: &mut Source) -> Option<Wow> {
-        let options = [(Wow::One, "a"),(Wow::Two,  b"b")];
+    fn parse(&self, src: &mut Source, context: &mut LayoutContext) {
+        let options = [(Wow::One, b"a"),(Wow::Two,  b"b")];
         let mut cursor = 0;
         let mut outstanding = options.len();
         let mut next;
         let mut found = None;
 
         while outstanding > 0 {
-            for option in options {
+            for option in &options {
                 next = src.next().unwrap();
 
                 // for each option, check if the current index-to-be-checked matches the given char
-                if option[1].len() >= cursor + 1 && option[1][cursor] == next {
+                if option.1.len() >= cursor + 1 && option.1[cursor] == next {
                     // if we've checked each character in this option
-                    if cursor == option[1].len() {
+                    if cursor == option.1.len() {
                         outstanding -= 1;
                         if outstanding == 0 {
                             // if this was the last outstanding option, return it
-                            return Some(option[0]);
+                            context.add(Instr::Literal())
+                            return
                         } else {
                             // if there are other outstanding options, save this one but keep going
-                            found = Some(option[0]);
+                            found = Some(option.0);
                         }
                     }
                 } else {

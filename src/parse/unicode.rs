@@ -45,13 +45,13 @@ pub enum UnicodeToken {
     /// Matches only the provided char
     Literal (u8),
 }
-pub trait AsciiUtils {
+pub trait AsciiUtils<T = Self> where Self: Sized + PartialOrd {
     #[inline(always)]
-    fn between(self, lower: u8, upper: u8) -> bool {
+    fn between(self, lower: Self, upper: Self) -> bool {
         self >= lower && self <= upper
     }
 }
-impl AsciiUtils for u8 {}
+impl AsciiUtils<u8> for u8 {}
 
 impl UnicodeToken {
     pub fn matches(&self, char: u8) -> bool {
@@ -69,7 +69,7 @@ impl UnicodeToken {
             Self::LogicSymbol => char == b'!' || char == b'&' || char == b'|',
             Self::Brace => char == b'{' || char == b'}',
             Self::Paren => char == b'(' || char == b')',
-            Self::Resource => char.between(b'-', b':') || char.is_alpha() || char == b'_',
+            Self::Resource => char.between(b'-', b':') || char.is_ascii_alphabetic() || char == b'_',
             Self::McIdent => char.is_ascii_alphanumeric() || char == b'.' || char == b'+' || char == b'-' || char == b'_',
             Self::ScoreVariableFirst => char.between(b'A', b'~') || char.between(b'!', b'?'),
             Self::IdentFirst => char.is_ascii_alphabetic() || char == b'_',
@@ -81,7 +81,7 @@ impl UnicodeToken {
         }
     }
 
-    pub fn get_out_of_range_message(&self, char: u8) -> &str {
+    pub fn get_out_of_range_message(&self, _: u8) -> &str {
         match self {
             Self::Any => "expected non-whitespace ascii character",
             Self::Digit => "expected a number from 0-9",
@@ -93,18 +93,18 @@ impl UnicodeToken {
             Self::AlphaNumeric => "expected a letter from A-z or a number from 0-9",
             Self::CompSymbol => "expected a comparison symbol such as '<', '>', or '='",
             Self::OpSymbol => "expected an operator symbol such as '+', '-', '*', '/', or '%'",
-            Self::LogicSymbol => char == b'!' || char == b'&' || char == b'|',
-            Self::Brace => char == b'{' || char == b'}',
-            Self::Paren => char == b'(' || char == b')',
-            Self::Resource => char.between(b'-', b':') || char.is_alpha() || char == b'_',
-            Self::McIdent => char.is_ascii_alphanumeric() || char == b'.' || char == b'+' || char == b'-' || char == b'_',
-            Self::ScoreVariableFirst => char.between(b'A', b'~') || char.between(b'!', b'?'),
-            Self::IdentFirst => char.is_ascii_alphabetic() || char == b'_',
-            Self::Ident => char.is_ascii_alphanumeric() || char == b'_',
-            Self::Not(x) => char != *x,
-            Self::Literal(x) => char == *x,
-            UnicodeToken::WhiteSpace => char == b' ' || char == b'\t',
-            UnicodeToken::NewLine => char == b'\n' || char == b'\r',
+            Self::LogicSymbol => "expected a logical symbol such as '|', '&', '^', '!', or '='",
+            Self::Brace => "expected '{' or '}'",
+            Self::Paren => "expected '(' or ')'",
+            Self::Resource => "expected an alphanumeric character, ':', '/', '-', or '_'",
+            Self::McIdent => "expected an alphanumeric character, ':', '/', '-', '+', or '_'",
+            Self::ScoreVariableFirst => "expected any non-whitespace, non-control ascii character other than '@'",
+            Self::IdentFirst => "expected any alpha character or '_'",
+            Self::Ident => "expected any alphanumeric character or '_'",
+            Self::Not(_) => "",
+            Self::Literal(_) => "",
+            UnicodeToken::WhiteSpace => "",
+            UnicodeToken::NewLine => "",
         }
     }
 }

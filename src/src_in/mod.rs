@@ -1,6 +1,5 @@
 use std::fs::File;
 use std::io::{BufReader, Read};
-use std::thread::current;
 
 pub struct Source {
     pub absolute_index: usize,

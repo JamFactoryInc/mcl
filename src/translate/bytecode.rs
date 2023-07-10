@@ -1,3 +1,5 @@
+use grammar::entity::EntitySelectorArg;
+use grammar::nbt::NbtPath;
 use crate::grammar::commands::Command;
 use crate::grammar::entity::EntitySelectorTarget;
 use crate::vm::Register;
@@ -23,8 +25,8 @@ pub enum Instr {
     ModRev { dest_rhs: Register, src_lhs: Register },
     /// scoreboard players operation dest reg = src reg
     Copy { dest: Register, src: Register },
-    Ref { dest: Pat, src: Register },
-    Deref { dest: Register, src: Path },
+    Ref { dest: NbtPath, src: Register },
+    Deref { dest: Register, src: NbtPath },
     /// execute unless score rhs reg matches 0 store score lhs reg 1 if score lhs reg matches 0
     XOr { dest_rhs: Register, lhs: Register },
     /// execute unless score rhs reg matches 0 store score lhs reg 1 if score lhs reg matches 0
@@ -43,7 +45,7 @@ pub enum Instr {
     Literal (&'static str),
 
     EntitySelector(EntitySelectorTarget),
-    EntitySelectorArg,
+    EntitySelectorArg(EntitySelectorArg),
 
     Command(Command),
     CommandArg(u32),

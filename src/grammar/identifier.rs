@@ -1,4 +1,42 @@
+use derive_more::Display;
+use parse::{ParseError, Parser, Suggestion};
+use src_in::Source;
+use vm::LayoutContext;
+
 /// `[_.-A-z0-9]+`
-pub type McIdentifier = &'static str;
+#[derive(Display)]
+pub struct McIdentifier {
+    str: String
+}
+impl Parser for McIdentifier {
+    fn get_error(&self, src: &mut Source) -> ParseError {
+        todo!()
+    }
+
+    fn get_suggestions(&self, partial: &[u8]) -> Vec<Suggestion> {
+        todo!()
+    }
+
+    fn parse(&self, src: &mut Source, context: &mut LayoutContext){
+        todo!()
+    }
+}
 /// `[A-z_][A-z_0-9]*`
-pub type Identifier = &'static str;
+#[derive(Display)]
+pub struct Identifier {
+    str: String
+}
+
+impl Parser for Identifier {
+    fn get_error(&self, src: &mut Source) -> ParseError {
+        todo!()
+    }
+
+    fn get_suggestions(&self, partial: &[u8]) -> Vec<Suggestion> {
+        todo!()
+    }
+
+    fn parse(&self, src: &mut Source, context: &mut LayoutContext){
+        todo!()
+    }
+}

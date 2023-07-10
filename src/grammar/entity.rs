@@ -1,11 +1,11 @@
-use std::io::repeat;
 use derive_more::Display;
+use util::RawString;
+use vm::LayoutContext;
 use crate::grammar::types::UDecimalRange;
 use crate::parse::ParseError;
 use crate::src_in::Source;
 use crate::parse::*;
 use crate::parse::unicode::UnicodeToken;
-use crate::translate::bytecode::Instr;
 
 #[derive(Display)]
 pub enum EntitySelectorTarget {
@@ -24,13 +24,12 @@ pub enum EntitySelectorTarget {
     /// @s
     #[display(fmt = "@s")]
     AtSelf,
-    #[display(fmt = "{}", "String::from_utf8(_0)")]
-    Name (Vec<u8>),
+    Name (RawString),
 }
-impl Parser<EntitySelectorTarget> for EntitySelectorTarget {
-    fn get_error(&self, src: &Source) -> ParseError {
-        ParseError::from(src, "expected one of `@a | @e | @p | @r | @s` or a player name")
 
+impl Parser<EntitySelectorTarget> for EntitySelectorTarget {
+    fn get_error(&self, src: &mut Source) -> ParseError {
+        ParseError::from(src, "expected one of `@a | @e | @p | @r | @s` or a player name")
     }
 
     fn get_suggestions(&self, partial: &[u8]) -> Vec<Suggestion> {
@@ -55,7 +54,7 @@ impl Parser<EntitySelectorTarget> for EntitySelectorTarget {
         }
     }
 
-    fn parse(&self, src: &mut Source) -> Option<EntitySelectorTarget> {
+    fn parse(&self, src: &mut Source, context: &mut LayoutContext) {
         match src.peek() {
             b'@' => {
                 src.next();
@@ -65,11 +64,14 @@ impl Parser<EntitySelectorTarget> for EntitySelectorTarget {
                     b'p' => Some(Self::AtPlayer),
                     b'r' => Some(Self::AtRandom),
                     b's' => Some(Self::AtSelf),
+                    _ => None
                 }
             }
             x @ _ => {
                 if UnicodeToken::McIdent.matches(x) {
-                    Some(EntitySelectorTarget::Name(Parser::repeat(|char| UnicodeToken::McIdent.matches(char), src)))
+                    Some(EntitySelectorTarget::Name(
+                        Matchers::repeat(|char| UnicodeToken::McIdent.matches(char), src))
+                    )
                 } else {
                     None
                 }
