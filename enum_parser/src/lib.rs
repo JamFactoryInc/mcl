@@ -79,13 +79,25 @@ impl Flattened {
                     continue;
                 }
 
-                let curr = &flattened.contents[current];
-                let next_byte = &string.as_bytes()[i];
+                let mut curr = &mut flattened.contents[current];
+                let next_byte = string.as_bytes()[i];
 
-                if curr.next.contains_key(next_byte) {
-
+                if !curr.next.contains_key(&next_byte) {
+                    let index = flattened.contents.len();
+                    curr.next.insert(next_byte, index);
+                    flattened.contents.push(FlattenedChar {
+                        complete: None,
+                        next: HashMap::from([(next_byte, index)]),
+                        prev: Some(current),
+                    })
                 } else {
-
+                    let index = flattened.contents.len();
+                    curr.next.insert(next_byte, index);
+                    flattened.contents.push(FlattenedChar {
+                        complete: None,
+                        next: HashMap::new(),
+                        prev: Some(current),
+                    })
                 }
 
             }
