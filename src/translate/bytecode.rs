@@ -1,19 +1,21 @@
-use grammar::entity::EntitySelectorArg;
-use grammar::nbt::NbtPath;
 use crate::grammar::commands::Command;
-use crate::grammar::entity::EntitySelectorTarget;
+use crate::grammar::entity::{EntitySelectorArg, EntitySelectorTarget};
+use crate::grammar::nbt::NbtPath;
+use crate::grammar::transform::{Coordinate, Rotation};
+use crate::parse::{ParseError, Suggestion};
 use crate::vm::Register;
 
-pub enum Instr {
+pub enum Instr<'a> {
+    Declare { dest: Register, val: usize },
     /// scoreboard players set dest reg val
-    Set { dest: Register, val: usize},
+    Set { dest: Register, val: usize },
     /// scoreboard players operation arg0 reg < arg1 reg
     SetMin { dest_arg0: Register, arg1: Register },
     /// scoreboard players operation arg0 reg > arg1 reg
     SetMax { dest_arg0: Register, arg1: Register },
     /// scoreboard players operation arg0 reg >< arg1 reg
     Swap { lhs: Register, rhs: Register },
-    Delete { register: Register },
+    Drop { register: Register },
     Scale { dest: Register },
     Add { dest_lhs: Register, src_rhs: Register },
     Sub { dest_lhs: Register, src_rhs: Register },
@@ -44,11 +46,16 @@ pub enum Instr {
 
     Literal (&'static str),
 
+    Coordinate (&'a Coordinate),
+    Rotation (&'a Rotation),
+
     EntitySelector(EntitySelectorTarget),
     EntitySelectorArg(EntitySelectorArg),
 
     Command(Command),
     CommandArg(u32),
 
+
+    ParseBreak { error: &'a ParseError, suggestion: &'a Suggestion }
 
 }

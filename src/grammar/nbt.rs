@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter};
 use derive_more::Display;
 use parse::{ParseError, Parser, Suggestion};
 use src_in::Source;
-use translate::bytecode::Instr;
+use vm::LayoutContext;
 use crate::grammar::identifier::McIdentifier;
 
 #[derive(Display)]
@@ -26,7 +26,7 @@ impl Parser for NbtPathFragment {
         todo!()
     }
 
-    fn parse(&self, src: &mut Source, instructions: Vec<Instr>) {
+    fn parse(&self, src: &mut Source, context: &mut LayoutContext) {
         todo!()
     }
 }

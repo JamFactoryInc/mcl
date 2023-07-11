@@ -3,6 +3,9 @@ name = "mcl"
 version = "0.0.1"
 authors = ["jam"]
 description = "An initiative to bring ergonomic runtime computing to datapacks"
+edition = "2021"
 
 [dependencies]
 derive_more = "0.99.17"
+enum_parser = { path = "./enum_parser"}
+futures = "0.3.28"

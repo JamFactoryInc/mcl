@@ -1,19 +1,19 @@
-use translate::bytecode::Instr;
+use crate::translate::bytecode::Instr;
 
 pub type Register = usize;
 
-pub struct Layout {
+pub struct Layout<'a> {
     namespace: String,
-    setup: Vec<Instr>,
-    functions: Vec<McFunction>,
+    setup: Vec<Instr<'a>>,
+    functions: Vec<McFunction<'a>>,
 }
 
-pub struct LayoutContext {
-    layout: Box<Layout>,
-    instructions: Vec<Instr>
+pub struct LayoutContext<'a> {
+    layout: &'a mut Layout<'a>,
+    instructions: Vec<Instr<'a>>
 }
 
-impl LayoutContext {
+impl<'a> LayoutContext<'a> {
     pub fn add(&mut self, instruction: Instr) {
         let x = vec![1, 2, 3];
         let y = x.clone();
@@ -25,9 +25,9 @@ impl LayoutContext {
 
 }
 
-pub struct McFunction {
+pub struct McFunction<'a> {
     parent: usize,
     checksum: u128,
     name: String,
-    instructions: Vec<Instr>
+    instructions: Vec<Instr<'a>>
 }

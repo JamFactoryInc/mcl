@@ -1,11 +1,10 @@
 use derive_more::Display;
-use util::RawString;
-use vm::LayoutContext;
 use crate::grammar::types::UDecimalRange;
 use crate::parse::ParseError;
 use crate::src_in::Source;
 use crate::parse::*;
 use crate::parse::unicode::UnicodeToken;
+use crate::util::RawString;
 
 #[derive(Display)]
 pub enum EntitySelectorTarget {
@@ -65,7 +64,7 @@ impl Parser<EntitySelectorTarget> for EntitySelectorTarget {
                     b'r' => Some(Self::AtRandom),
                     b's' => Some(Self::AtSelf),
                     _ => None
-                }
+                };
             }
             x @ _ => {
                 if UnicodeToken::McIdent.matches(x) {
@@ -74,9 +73,10 @@ impl Parser<EntitySelectorTarget> for EntitySelectorTarget {
                     )
                 } else {
                     None
-                }
+                };
             }
         }
+        todo!()
     }
 }
 

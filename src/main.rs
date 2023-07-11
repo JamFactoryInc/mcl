@@ -1,4 +1,5 @@
 extern crate derive_more;
+extern crate enum_parser;
 
 mod vm;
 mod translate;
@@ -8,6 +9,11 @@ mod grammar;
 mod util;
 
 fn main() {
+
+    enum_parser::enum_parser!(
+        SomeName,
+        "one", "1two", "++", "-=", "&&", "==", "||", "@p");
+
     println!("Hello, world!");
 
     let mut x = vec![1, 2, 3];

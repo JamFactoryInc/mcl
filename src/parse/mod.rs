@@ -2,10 +2,9 @@ pub mod unicode;
 
 use std::fmt::{Display};
 use derive_more::Display;
-use translate::bytecode::Instr;
-use util::RawString;
-use vm::LayoutContext;
 use crate::src_in::Source;
+use crate::util::RawString;
+use crate::vm::LayoutContext;
 
 pub struct ParsedExpression {
     tooltip : &'static str,
@@ -13,12 +12,12 @@ pub struct ParsedExpression {
 }
 
 pub struct Suggestion {
-    display: &'static str,
-    contents: &'static str,
+    display: String,
+    contents: String,
     bold_from: usize,
 }
 impl Suggestion {
-    pub fn of(display: &'static str, contents: &'static str, bold_from: usize) -> Suggestion {
+    pub fn of(display: String, contents: String, bold_from: usize) -> Suggestion {
         Suggestion {
             display,
             contents,
@@ -61,7 +60,7 @@ impl Matchers {
 pub trait Parser<T = Self> where T: Display {
     fn get_error(&self, src: &mut Source) -> ParseError;
     fn get_suggestions(&self, partial: &[u8]) -> Vec<Suggestion>;
-    fn parse(&self, src: &mut Source, context: &mut LayoutContext);
+    fn parse<'a>(&self, src: &mut Source, context: &'a mut LayoutContext);
 }
 
 pub struct LiteralParser {
@@ -84,7 +83,7 @@ impl Parser for Wow {
     }
 
     // todo: refactor this to use a proc macro so we can do pre-computed logic instead of array garbage
-    fn parse(&self, src: &mut Source, context: &mut LayoutContext) {
+    fn parse<'a>(&self, src: &mut Source, context: &'a mut LayoutContext) {
         let options = [(Wow::One, b"a"),(Wow::Two,  b"b")];
         let mut cursor = 0;
         let mut outstanding = options.len();
@@ -102,7 +101,7 @@ impl Parser for Wow {
                         outstanding -= 1;
                         if outstanding == 0 {
                             // if this was the last outstanding option, return it
-                            context.add(Instr::Literal())
+                            //context.add(Instr::Literal())
                             return
                         } else {
                             // if there are other outstanding options, save this one but keep going
@@ -116,7 +115,7 @@ impl Parser for Wow {
             cursor += 1;
         }
 
-        return found
+        todo!()
     }
 }
 

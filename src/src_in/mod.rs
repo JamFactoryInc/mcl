@@ -1,23 +1,43 @@
 use std::fs::File;
+use std::future::Future;
 use std::io::{BufReader, Read};
+use std::mem;
+use futures::executor::block_on;
 
 pub struct Source {
     pub absolute_index: usize,
     pub line: usize,
     pub index: isize,
-    pub size: usize,
+    pub max_index: usize,
     cursor: usize,
-    buffer: [u8; 2048],
+    buffer: [u8; 1024],
+    buffer_next: [u8; 1024],
     reader: BufReader<File>,
+    read_promise: Option<Box<dyn Future<Output = usize>>>,
     pub current_line: Vec<u8>,
 }
 
 impl Source {
+
+    pub fn skip(&mut self) {
+
+    }
+
     pub fn peek(&self) -> u8 {
         self.buffer[self.cursor]
     }
 
-    #[inline(always)]
+    fn inc_cursor(&mut self) {
+        if self.cursor < self.max_index {
+            self.cursor += 1;
+        } else {
+            self.cursor = 0;
+            self.max_index = block_on(self.read_promise.unwrap());
+            mem::swap(&mut self.buffer, &mut self.buffer_next);
+            self.read_promise.unwrap()
+        }
+    }
+
     fn handle_increment(&mut self, next: u8) {
         match next {
             b'\n' => {
@@ -33,21 +53,10 @@ impl Source {
         }
     }
 
-    fn buffer(&mut self) -> Option<u8> {
-        match self.reader.read(&mut self.buffer) {
+    async fn buffer_next(&mut self) -> usize {
+        match self.reader.read(&mut self.buffer_next) {
             Ok(bytes) => {
-                self.size = bytes;
-                return if bytes == 0 {
-                    None
-                } else {
-                    let next = self.buffer[0];
-
-                    self.handle_increment(next);
-
-                    self.cursor = 1;
-                    Some(next)
-                }
-
+                bytes - 1
             },
             Err(e) => panic!("{}", e)
         }
@@ -59,16 +68,9 @@ impl Iterator for Source {
 
     #[inline(always)]
     fn next(&mut self) -> Option<Self::Item> {
-        if self.cursor < self.size {
-            let next = self.buffer[self.cursor];
+        let next = self.buffer[self.cursor];
+        self.handle_increment(next);
 
-            self.handle_increment(next);
-
-            self.cursor += 1;
-
-            Some(next)
-        } else {
-            self.buffer()
-        }
+        self.inc_cursor()
     }
 }
