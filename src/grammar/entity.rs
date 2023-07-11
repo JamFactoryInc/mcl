@@ -5,6 +5,7 @@ use crate::src_in::Source;
 use crate::parse::*;
 use crate::parse::unicode::UnicodeToken;
 use crate::util::RawString;
+use crate::vm::LayoutContext;
 
 #[derive(Display)]
 pub enum EntitySelectorTarget {
@@ -34,19 +35,19 @@ impl Parser<EntitySelectorTarget> for EntitySelectorTarget {
     fn get_suggestions(&self, partial: &[u8]) -> Vec<Suggestion> {
         if partial.len() == 0 {
             vec![
-                Suggestion::of("@a", "@a", 0),
-                Suggestion::of("@e", "@e", 0),
-                Suggestion::of("@p", "@p", 0),
-                Suggestion::of("@r", "@r", 0),
-                Suggestion::of("@s", "@s", 0),
+                Suggestion::of("@a".to_string(), "@a".to_string(), 0),
+                Suggestion::of("@e".to_string(), "@e".to_string(), 0),
+                Suggestion::of("@p".to_string(), "@p".to_string(), 0),
+                Suggestion::of("@r".to_string(), "@r".to_string(), 0),
+                Suggestion::of("@s".to_string(), "@s".to_string(), 0),
             ]
         } else if partial.len() == 1 && partial[0] == b'@' {
             vec![
-                Suggestion::of("@a", "a", 1),
-                Suggestion::of("@e", "e", 1),
-                Suggestion::of("@p", "p", 1),
-                Suggestion::of("@r", "r", 1),
-                Suggestion::of("@s", "s", 1),
+                Suggestion::of("@a".to_string(), "a".to_string(), 1),
+                Suggestion::of("@e".to_string(), "e".to_string(), 1),
+                Suggestion::of("@p".to_string(), "p".to_string(), 1),
+                Suggestion::of("@r".to_string(), "r".to_string(), 1),
+                Suggestion::of("@s".to_string(), "s".to_string(), 1),
             ]
         } else {
             Vec::new()

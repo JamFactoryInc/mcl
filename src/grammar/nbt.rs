@@ -1,9 +1,9 @@
 use std::fmt::{Display, Formatter};
 use derive_more::Display;
-use parse::{ParseError, Parser, Suggestion};
-use src_in::Source;
-use vm::LayoutContext;
 use crate::grammar::identifier::McIdentifier;
+use crate::parse::{ParseError, Parser, Suggestion};
+use crate::src_in::Source;
+use crate::vm::LayoutContext;
 
 #[derive(Display)]
 pub enum NbtPathFragment {

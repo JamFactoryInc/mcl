@@ -28,7 +28,7 @@ impl Suggestion {
 
 pub struct ParseError {
     line: usize,
-    index: isize,
+    index: usize,
     absolute_index: usize,
     message: &'static str,
 }
@@ -36,7 +36,7 @@ impl ParseError {
     pub fn from(src: &Source, msg: &'static str) -> ParseError {
         ParseError {
             line: src.line,
-            index: src.index,
+            index: src.get_index(),
             absolute_index: src.absolute_index,
             message: msg
         }

@@ -19,7 +19,7 @@ impl<'a> LayoutContext<'a> {
         let y = x.clone();
     }
 
-    pub fn add_setup(&mut self, instruction: Instr) {
+    pub fn add_setup(&mut self, instruction: Instr<'a>) {
         self.layout.setup.push(instruction)
     }
 

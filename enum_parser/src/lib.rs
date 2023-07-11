@@ -2,21 +2,23 @@ extern crate proc_macro;
 
 use proc_macro::*;
 use std::collections::{HashMap};
-use std::fmt::Write as _;
+use std::fmt::{Debug, Display, Formatter, Write as _};
 
 #[proc_macro]
 pub fn enum_parser(input: TokenStream) -> TokenStream {
 
     let src = input.to_string();
+    let mut out_src = String::new();
 
     let (name, ident_str) = get_name_and_ident_string_tuples(src);
 
-    let flattened = CharTree::construct(ident_str);
+    write!(out_src, "{}", gen_enum(&name, &ident_str)).unwrap();
 
-    let mut out_src = String::new();
+    let char_tree = CharTree::construct(&ident_str);
 
+    write!(out_src, "{}", gen_parser(&name, &ident_str, &char_tree)).unwrap();
 
-    out_src.parse().unwrap()
+    format!("println!(\"{{}}\", r#\"{}\"#);", out_src).parse().unwrap()
 
 }
 
@@ -175,7 +177,7 @@ fn get_name_and_ident_string_tuples(src: String) -> (String, Vec<(String, String
     (name, tuples)
 }
 
-fn gen_enum(enum_name: String, ident_string_tuples: Vec<(String, String)>) -> String {
+fn gen_enum(enum_name: &String, ident_string_tuples: &Vec<(String, String)>) -> String {
     let mut src_out = String::new();
 
     write!(src_out, "enum {} {{", enum_name).unwrap();
@@ -189,7 +191,7 @@ fn gen_enum(enum_name: String, ident_string_tuples: Vec<(String, String)>) -> St
     src_out
 }
 
-fn gen_parser(enum_name: String, ident_string_tuples: Vec<(String, String)>, char_tree: &CharTree) -> String {
+fn gen_parser(enum_name: &String, ident_string_tuples:  &Vec<(String, String)>, char_tree: &CharTree) -> String {
     format!(r#"
         impl Parser for {} {{
             fn get_error(&self, src: &mut Source) -> ParseError {{
@@ -217,15 +219,17 @@ fn gen_get_error(enum_name: &String, ident_string_tuples: &Vec<(String, String)>
 
     write!(error, "expected one of");
 
-    error
+    error;
+
+    "todo!()".to_string()
 }
 
 fn gen_get_suggestions(enum_name: &String, ident_string_tuples: &Vec<(String, String)>) -> String {
-    todo!()
+    "todo!()".to_string()
 }
 
 fn gen_parse(enum_name: &String, char_tree: &CharTree) -> String {
-    todo!()
+    gen_match(enum_name, char_tree, 0)
 }
 
 struct FlattenedChar {
@@ -234,12 +238,27 @@ struct FlattenedChar {
     prev: Option<usize>,
     cumulative: String,
 }
+impl Display for FlattenedChar {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "complete: {}, prev: {}, cumulative: \\\"{}\\\", next: ",
+            match &self.complete { Some(x) => x, _ => "None" },
+            match self.prev { Some(x) => x.to_string(), _ => "None".to_string() },
+            self.cumulative,
+        ).unwrap();
+
+        for (k, v) in &self.next {
+            write!(f, "({} : {})", *k as char, v).unwrap();
+        };
+
+        Ok(())
+    }
+}
 
 struct CharTree {
     contents: Vec<FlattenedChar>,
 }
 impl CharTree {
-    fn construct(strings: Vec<(String, String)>) -> CharTree {
+    fn construct(strings:&Vec<(String, String)>) -> CharTree {
         let mut char_tree = CharTree {
             contents: vec![FlattenedChar {
                 complete: None,
@@ -249,9 +268,8 @@ impl CharTree {
             }],
         };
 
-        let mut current = 0usize;
-
         for (ident, raw_str) in strings {
+            let mut current = 0usize;
             for (i, byte) in raw_str.bytes().enumerate() {
                 let index = char_tree.contents.len();
                 let curr = &mut char_tree.contents[current];
@@ -262,7 +280,7 @@ impl CharTree {
                         complete: None,
                         next: HashMap::new(),
                         prev: Some(current),
-                        cumulative: raw_str[0..i].to_string()
+                        cumulative: raw_str[0..i + 1].to_string()
                     });
                     current = index;
                 } else {
@@ -283,19 +301,19 @@ fn gen_match(enum_name: &String, char_tree: &CharTree, start_index: usize) -> St
 
     match &curr.complete {
         Some(ident) => {
-            write!(src_out, "match src.peek() {{").unwrap();
-            for char in curr.next.keys() {
-                write!(src_out, r#"b'{char}' => {{
-                    src.skip(1)
-                    {};
-                }},"#, gen_match(enum_name, char_tree, curr.next[char])).unwrap();
+            write!(src_out, "match src.peek() {{\n").unwrap();
+            for c in curr.next.keys() {
+                write!(src_out, r#"b'{}' => {{\n
+                    src.next();\n
+                    {};\n
+                }},"#, *c as char, gen_match(enum_name, char_tree, curr.next[c])).unwrap();
             }
             write!(src_out, "_ => Instr::{enum_name}({enum_name}::{ident}), ").unwrap();
         },
         None => {
             write!(src_out, "match src.next() {{").unwrap();
-            for char in curr.next.keys() {
-                write!(src_out, "b'{char}' => {},", gen_match(enum_name, char_tree, curr.next[char])).unwrap();
+            for c in curr.next.keys() {
+                write!(src_out, "b'{}' => {},", *c as char, gen_match(enum_name, char_tree, curr.next[c])).unwrap();
             }
             write!(src_out, "_ => Instr::ParseError{{ error: &'a self.get_error(src), suggestion: &'a self.get_suggestions(b\"{}\")}},", curr.cumulative).unwrap();
         },

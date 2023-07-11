@@ -1,7 +1,7 @@
 use derive_more::Display;
-use parse::{ParseError, Parser, Suggestion};
-use src_in::Source;
-use vm::LayoutContext;
+use crate::parse::{ParseError, Parser, Suggestion};
+use crate::src_in::Source;
+use crate::vm::LayoutContext;
 
 /// `[_.-A-z0-9]+`
 #[derive(Display)]

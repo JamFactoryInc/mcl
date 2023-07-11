@@ -12,7 +12,7 @@ fn main() {
 
     enum_parser::enum_parser!(
         SomeName,
-        "one", "1two", "++", "-=", "&&", "==", "||", "@p");
+        "one", "only", "onus", "ocre", "1two", "++", "-=", "&&", "==", "||", "@p");
 
     println!("Hello, world!");
 
