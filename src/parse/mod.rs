@@ -3,6 +3,7 @@ pub mod unicode;
 use std::fmt::{Display};
 use derive_more::Display;
 use crate::src_in::Source;
+use crate::translate::bytecode::Instr;
 use crate::util::RawString;
 use crate::vm::LayoutContext;
 
@@ -57,10 +58,14 @@ impl Matchers {
     }
 }
 
-pub trait Parser<T = Self> where T: Display {
-    fn get_error(&self, src: &mut Source) -> ParseError;
-    fn get_suggestions(&self, partial: &[u8]) -> Vec<Suggestion>;
-    fn parse<'a>(&self, src: &mut Source, context: &'a mut LayoutContext);
+pub trait Parser<Out = Instr> where Self: Display {
+    fn get_error(&self, src: &mut Source) -> ParseError {
+        ParseError::from(src, &format!("{}", self))
+    }
+    fn get_suggestions(&self, partial: &[u8]) -> Vec<Suggestion> {
+        Vec::new()
+    }
+    fn parse<'a>(&self, src: &mut Source) -> Result<Out, ParseError>;
 }
 
 pub struct LiteralParser {

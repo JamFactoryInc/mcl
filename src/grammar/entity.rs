@@ -1,11 +1,23 @@
 use derive_more::Display;
-use crate::grammar::types::UDecimalRange;
+use crate::grammar::commands::gamemode::Gamemode;
+use crate::grammar::nbt::Nbt;
+use crate::grammar::types::{DecimalRange, McIdentifier, UDecimalRange};
 use crate::parse::ParseError;
 use crate::src_in::Source;
 use crate::parse::*;
 use crate::parse::unicode::UnicodeToken;
 use crate::util::RawString;
 use crate::vm::LayoutContext;
+
+pub enum ScoreboardEntitySelector {
+    FakePlayer(String),
+    EntitySelector(EntitySelector)
+}
+
+pub struct EntitySelector {
+    target: EntitySelectorTarget,
+    args: Vec<EntitySelectorArg>
+}
 
 #[derive(Display)]
 pub enum EntitySelectorTarget {
@@ -84,14 +96,14 @@ impl Parser<EntitySelectorTarget> for EntitySelectorTarget {
 pub enum EntitySelectorArg {
     Advancements,
     Distance (UDecimalRange),
-    Dx,
-    Dy,
-    Dz,
-    Gamemode,
-    Level,
-    Limit,
-    Name,
-    Nbt,
+    Dx (DecimalRange),
+    Dy (DecimalRange),
+    Dz (DecimalRange),
+    Gamemode (Gamemode),
+    Level (i32),
+    Limit (i32),
+    Name (McIdentifier),
+    Nbt (Nbt),
     Predicate,
     Scores,
     Sort,

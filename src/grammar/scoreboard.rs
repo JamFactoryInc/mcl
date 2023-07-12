@@ -1,4 +1,4 @@
-enum ScoreOperator {
+pub enum ScoreOperator {
     Set,
     Mul,
     Div,
@@ -10,7 +10,7 @@ enum ScoreOperator {
     Swap,
 }
 
-enum ScoreComparator {
+pub enum ScoreComparator {
     Equal,
     LessThan,
     LessThanEqual,

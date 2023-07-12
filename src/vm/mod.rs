@@ -1,6 +1,11 @@
 use crate::translate::bytecode::Instr;
 
-pub type Register = usize;
+pub type Function = usize;
+pub enum Variable<'a> {
+    Register(usize),
+    Score(EntitySelector),
+    Nbt,
+}
 
 pub struct Layout<'a> {
     namespace: String,

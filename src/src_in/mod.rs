@@ -23,6 +23,7 @@ impl Source {
         self.current_line.len()
     }
 
+    #[inline(always)]
     pub fn peek(&self) -> u8 {
         self.buffer[self.cursor]
     }

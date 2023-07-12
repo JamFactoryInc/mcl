@@ -3,6 +3,9 @@ extern crate proc_macro;
 use proc_macro::*;
 use std::collections::{HashMap};
 use std::fmt::{Debug, Display, Formatter, Write as _};
+use std::ops::Add;
+use std::task::Poll::Pending;
+use quote::quote;
 
 #[proc_macro]
 pub fn enum_parser(input: TokenStream) -> TokenStream {
@@ -193,20 +196,22 @@ fn gen_enum(enum_name: &String, ident_string_tuples: &Vec<(String, String)>) -> 
 
 fn gen_parser(enum_name: &String, ident_string_tuples:  &Vec<(String, String)>, char_tree: &CharTree) -> String {
     format!(r#"
-        impl Parser for {} {{
-            fn get_error(&self, src: &mut Source) -> ParseError {{
-                {}
-            }}
+impl Parser<> for {} {{
+    fn get_error(&self, src: &mut Source) -> ParseError {{
+        {}
+    }}
 
-            fn get_suggestions(&self, partial: &[u8]) -> Vec<Suggestion> {{
-                {}
-            }}
+    fn get_suggestions(&self, partial: &[u8]) -> Vec<Suggestion> {{
+        let bold_from = partial.len();
 
-            fn parse<'a>(&self, src: &mut Source, context: &'a mut LayoutContext) {{
-                {}
-            }}
-        }}
-        "#,
+        {}
+    }}
+
+    fn parse<'a>(&self, src: &mut Source, context: &'a mut LayoutContext) -> Result<> {{
+        {}
+    }}
+}}
+"#,
             enum_name,
             gen_get_error(&enum_name, &ident_string_tuples),
             gen_get_suggestions(&enum_name, &ident_string_tuples),
@@ -229,7 +234,7 @@ fn gen_get_suggestions(enum_name: &String, ident_string_tuples: &Vec<(String, St
 }
 
 fn gen_parse(enum_name: &String, char_tree: &CharTree) -> String {
-    gen_match(enum_name, char_tree, 0)
+    gen_match(enum_name, char_tree, 0, 3)
 }
 
 struct FlattenedChar {
@@ -294,33 +299,40 @@ impl CharTree {
     }
 }
 
-fn gen_match(enum_name: &String, char_tree: &CharTree, start_index: usize) -> String {
+fn gen_match(enum_name: &String, char_tree: &CharTree, start_index: usize, depth: usize) -> String {
 
     let mut src_out = String::new();
     let curr = &char_tree.contents[start_index];
+    let __ = "   |".repeat(depth - 1);
+    let ___ = __.clone() + "   |";
+    let ____ = ___.clone() + "   |";
+    let _____ = ____.clone() + "   |";
 
     match &curr.complete {
         Some(ident) => {
-            write!(src_out, "match src.peek() {{\n").unwrap();
-            for c in curr.next.keys() {
-                write!(src_out, r#"b'{}' => {{\n
-                    src.next();\n
-                    {};\n
-                }},"#, *c as char, gen_match(enum_name, char_tree, curr.next[c])).unwrap();
+            if curr.next.len() > 0 {
+                write!(src_out, "match src.peek() {{\n").unwrap();
+                for c in curr.next.keys() {
+                    write!(src_out, "{__}b'{}' => {{\n", *c as char).unwrap();
+                    write!(src_out, "{___}src.next();\n" ).unwrap();
+                    write!(src_out, "{___}{};\n", gen_match(enum_name, char_tree, curr.next[c], depth + 1)).unwrap();
+                    write!(src_out, "{__}}},\n").unwrap();
+                }
+                write!(src_out, "{___}_ => Instr::{enum_name}({enum_name}::{ident}),\n").unwrap();
+                write!(src_out, "{__}}}",).unwrap();
+            } else {
+                write!(src_out, "Instr::{enum_name}({enum_name}::{ident})").unwrap();
             }
-            write!(src_out, "_ => Instr::{enum_name}({enum_name}::{ident}), ").unwrap();
         },
         None => {
-            write!(src_out, "match src.next() {{").unwrap();
+            write!(src_out, "match src.next() {{\n").unwrap();
             for c in curr.next.keys() {
-                write!(src_out, "b'{}' => {},", *c as char, gen_match(enum_name, char_tree, curr.next[c])).unwrap();
+                write!(src_out, "{___}b'{}' => {},\n", *c as char, gen_match(enum_name, char_tree, curr.next[c], depth + 1)).unwrap();
             }
-            write!(src_out, "_ => Instr::ParseError{{ error: &'a self.get_error(src), suggestion: &'a self.get_suggestions(b\"{}\")}},", curr.cumulative).unwrap();
+            write!(src_out, "{___}_ => Instr::ParseError{{ error: &'a self.get_error(src), suggestion: &'a self.get_suggestions(b\"{}\")}},\n", curr.cumulative).unwrap();
+            write!(src_out, "{__}}}").unwrap();
         },
     }
 
-    write!(src_out, "}}").unwrap();
-
     src_out
 }
-

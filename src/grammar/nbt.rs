@@ -1,6 +1,7 @@
 use std::fmt::{Display, Formatter};
 use derive_more::Display;
 use crate::grammar::identifier::McIdentifier;
+use crate::grammar::types::McIdentifier;
 use crate::parse::{ParseError, Parser, Suggestion};
 use crate::src_in::Source;
 use crate::vm::LayoutContext;
@@ -45,8 +46,9 @@ impl Display for NbtPath {
 
 #[derive(Display)]
 #[display(fmt = "{{{}, {}}}", key, val)]
-pub struct Nbt {
-    key: McIdentifier, val: Box<NbtElement>
+pub enum Nbt {
+    Object,
+    Array
 }
 
 pub struct NbtArrayElements {
@@ -62,10 +64,11 @@ impl Display for NbtArrayElements {
 }
 
 #[derive(Display)]
-pub enum NbtElement {
+pub enum NbtElement<'a> {
     #[display(fmt = "[{} {}]", array_type, elements)]
-    Array { array_type: ArrayTypes, elements: NbtArrayElements},
-    Object (Nbt),
+    Array { array_type: ArrayTypes, elements: NbtArrayElements },
+    #[display(fmt = "{{{}: {}}}", key, val)]
+    Object { key: McIdentifier, val: &'a NbtElement<'a>},
     String (&'static str),
     #[display(fmt = "{}l", "_0")]
     Long (usize),
