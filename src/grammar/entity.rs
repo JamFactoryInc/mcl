@@ -39,12 +39,13 @@ pub enum EntitySelectorTarget {
     Name (RawString),
 }
 
-impl Parser<EntitySelectorTarget> for EntitySelectorTarget {
-    fn get_error(&self, src: &mut Source) -> ParseError {
+impl Parser for EntitySelectorTarget {
+    type Out = Self;
+    fn get_error(src: &mut Source) -> ParseError {
         ParseError::from(src, "expected one of `@a | @e | @p | @r | @s` or a player name")
     }
 
-    fn get_suggestions(&self, partial: &[u8]) -> Vec<Suggestion> {
+    fn get_suggestions(partial: &[u8]) -> Vec<Suggestion> {
         if partial.len() == 0 {
             vec![
                 Suggestion::of("@a".to_string(), "@a".to_string(), 0),
@@ -66,7 +67,11 @@ impl Parser<EntitySelectorTarget> for EntitySelectorTarget {
         }
     }
 
-    fn parse(&self, src: &mut Source, context: &mut LayoutContext) {
+    fn test(src: &mut Source) -> bool {
+        todo!()
+    }
+
+    fn parse(src: &mut Source) {
         match src.peek() {
             b'@' => {
                 src.next();

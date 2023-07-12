@@ -1,3 +1,5 @@
+#![feature(specialization)]
+
 extern crate derive_more;
 extern crate enum_parser;
 

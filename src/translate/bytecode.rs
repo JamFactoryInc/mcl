@@ -5,7 +5,7 @@ use crate::grammar::scoreboard::ScoreOperator;
 use crate::grammar::transform::{Coordinate, Rotation};
 use crate::grammar::types::{Decimal, McIdentifier, Resource};
 use crate::parse::{ParseError, Suggestion};
-use crate::vm::{Function, Variable<'a>};
+use crate::vm::{Function, Variable};
 
 pub enum OperatorPrecedence {
     /// (...)

@@ -1,21 +1,17 @@
-use std::fmt::Display;
+use std::fmt::{Display, Formatter};
 use derive_more::Display;
-use crate::parse::{ParseError, Parser, Suggestion};
+use crate::parse::{Optional, ParseError, Parser, Suggestion};
 use crate::src_in::Source;
 use crate::vm::LayoutContext;
 
-trait UnsignedPrimitive {}
-
-impl UnsignedPrimitive for u32 {}
-impl UnsignedPrimitive for usize {}
-impl<T> Parser<T> for T where T: UnsignedPrimitive + Display {
-    fn parse<'a>(&self, src: &mut Source) -> Result<T, ParseError> {
+trait UnsignedPrimitive {
+    fn parse_unsigned<T : Parser>(parser: &T, src: &mut Source) -> Result<T, ParseError> {
         let mut result = match src.peek() {
             num @ b'0'..=b'9' => {
                 src.next();
                 num as T - b'0'
             },
-            _ => return Err(self.get_error(src))
+            _ => return Err(parser.get_error(src))
         };
         loop {
             match src.peek() {
@@ -23,7 +19,7 @@ impl<T> Parser<T> for T where T: UnsignedPrimitive + Display {
                     src.next();
                     result = match result.checked_mul(10).and_then(|r| r.checked_add(num as T - b'0')) {
                         Some(r) => r,
-                        _ => break Err(self.get_error(src)),
+                        _ => break Err(parser.get_error(src)),
                     };
                 },
                 _ => break Ok(result)
@@ -32,23 +28,43 @@ impl<T> Parser<T> for T where T: UnsignedPrimitive + Display {
     }
 }
 
-trait SignedPrimitive {}
-impl<Signed> Parser<Signed> for Signed where Signed: SignedPrimitive + Display {
-    fn parse<'a>(&self, src: &mut Source) -> Result<Signed, ParseError> {
+impl UnsignedPrimitive for u32 {}
+impl UnsignedPrimitive for usize {}
+impl<T: UnsignedPrimitive + Display> Parser for T {
+    type Out = T;
+
+    fn test(&self, src: &mut Source) -> bool {
+        match src.peek() {
+            b'0'..=b'9' => true,
+            _ => false,
+        }
+    }
+
+    fn parse<'a>(&self, src: &mut Source) -> Result<T, ParseError> {
+        UnsignedPrimitive::parse(self, src)
+    }
+}
+
+trait SignedPrimitive {
+    fn parse_signed<T : Parser>(parser: &T, src: &mut Source) -> Result<T, ParseError> {
+        let additive_fn = match src.peek() {
+            b'-' => |r, num| r.checked_add(num as T - b'0'),
+            _ => |r, num| r.ch(num as T - b'0'),
+        };
         let mut result = match src.peek() {
             num @ b'0'..=b'9' => {
                 src.next();
-                num as Signed - b'0'
+                num as T - b'0'
             },
-            _ => return Err(self.get_error(src))
+            _ => return Err(parser.get_error(src))
         };
         loop {
             match src.peek() {
                 num @ b'0'..=b'9' => {
                     src.next();
-                    result = match result.checked_mul(10).and_then(|r| r.checked_add(num as Signed - b'0')) {
+                    result = match result.checked_mul(10).and_then(|r| additive_fn(r, num)) {
                         Some(r) => r,
-                        _ => break Err(self.get_error(src)),
+                        _ => break Err(parser.get_error(src)),
                     };
                 },
                 _ => break Ok(result)
@@ -57,22 +73,11 @@ impl<Signed> Parser<Signed> for Signed where Signed: SignedPrimitive + Display {
     }
 }
 
-impl<T> Parser for Option<T> where T: Parser + Display {
-    fn get_error(&self, src: &mut Source) -> ParseError {
-        todo!()
-    }
-
-    fn get_suggestions(&self, partial: &[u8]) -> Vec<Suggestion> {
-        todo!()
-    }
-
-    fn parse<'a>(&self, src: &mut Source, context: &'a mut LayoutContext) {
-        todo!()
-    }
-}
-
-pub struct UDecimal { int: Option<u32>, dec: Option<u32> }
+#[derive(Display)]
+#[display(fmt = "{}..{}", int, dec)]
+pub struct UDecimal { int: Optional<u32>, dec: Optional<u32> }
 impl Parser for UDecimal {
+    type Out = UDecimal;
     fn get_error(&self, src: &mut Source) -> ParseError {
         ParseError::from(src, "one of ")
     }
@@ -81,7 +86,7 @@ impl Parser for UDecimal {
         todo!()
     }
 
-    fn parse<'a>(&self, src: &mut Source, context: &'a mut LayoutContext) {
+    fn parse<'a>(&self, src: &mut Source) {
         todo!()
     }
 }

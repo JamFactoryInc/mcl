@@ -1,11 +1,40 @@
 pub mod unicode;
 
-use std::fmt::{Display};
+use std::fmt::{Display, Formatter, write};
 use derive_more::Display;
+use crate::parse::Optional::*;
 use crate::src_in::Source;
 use crate::translate::bytecode::Instr;
 use crate::util::RawString;
 use crate::vm::LayoutContext;
+
+pub enum Optional<T> {
+    Filled(T),
+    Empty
+}
+impl<T: Display> Display for Optional<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Some(x) => write!(f, "{x}").unwrap(),
+            None => ()
+        };
+        Ok(())
+    }
+}
+impl<T: Display + Parser> Parser for Optional<T> {
+    type Out = Self;
+
+    fn test(src: &mut Source) -> bool {
+        T::test(src)
+    }
+
+    fn parse<'a>(src: &mut Source) -> Result<Self::Out, ParseError> {
+        match T::parse(src) {
+            Ok(x) => Ok(Filled(x)),
+            Err(_) => Ok(Empty)
+        }
+    }
+}
 
 pub struct ParsedExpression {
     tooltip : &'static str,
@@ -58,72 +87,22 @@ impl Matchers {
     }
 }
 
-pub trait Parser<Out = Instr> where Self: Display {
-    fn get_error(&self, src: &mut Source) -> ParseError {
-        ParseError::from(src, &format!("{}", self))
+pub trait Parser where Self: Display {
+    type Out;
+    fn get_error(src: &mut Source) -> ParseError {
+        ParseError::from(src, "parse error")
     }
-    fn get_suggestions(&self, partial: &[u8]) -> Vec<Suggestion> {
+    fn get_suggestions(partial: &[u8]) -> Vec<Suggestion> {
         Vec::new()
     }
-    fn parse<'a>(&self, src: &mut Source) -> Result<Out, ParseError>;
+    fn test(src: &mut Source) -> bool;
+    fn parse<'a>(src: &mut Source) -> Result<Self::Out, ParseError>;
 }
 
 pub struct LiteralParser {
     cursor: usize,
     options: Vec<Vec<u8>>,
 }
-
-#[derive(Display, Clone, Copy)]
-pub enum Wow {
-    One,
-    Two,
-}
-impl Parser for Wow {
-    fn get_error(&self, _: &mut Source) -> ParseError {
-        todo!()
-    }
-
-    fn get_suggestions(&self, _: &[u8]) -> Vec<Suggestion> {
-        todo!()
-    }
-
-    // todo: refactor this to use a proc macro so we can do pre-computed logic instead of array garbage
-    fn parse<'a>(&self, src: &mut Source, context: &'a mut LayoutContext) {
-        let options = [(Wow::One, b"a"),(Wow::Two,  b"b")];
-        let mut cursor = 0;
-        let mut outstanding = options.len();
-        let mut next;
-        let mut found = None;
-
-        while outstanding > 0 {
-            for option in &options {
-                next = src.next().unwrap();
-
-                // for each option, check if the current index-to-be-checked matches the given char
-                if option.1.len() >= cursor + 1 && option.1[cursor] == next {
-                    // if we've checked each character in this option
-                    if cursor == option.1.len() {
-                        outstanding -= 1;
-                        if outstanding == 0 {
-                            // if this was the last outstanding option, return it
-                            //context.add(Instr::Literal())
-                            return
-                        } else {
-                            // if there are other outstanding options, save this one but keep going
-                            found = Some(option.0);
-                        }
-                    }
-                } else {
-                    outstanding -= 1;
-                }
-            }
-            cursor += 1;
-        }
-
-        todo!()
-    }
-}
-
 
 macro_rules! literal_options {
     ( $name:ident { $($rule:ident: $lit:literal),+ } ) => {

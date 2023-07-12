@@ -1,6 +1,5 @@
 use std::fmt::{Display, Formatter};
 use derive_more::Display;
-use crate::grammar::identifier::McIdentifier;
 use crate::grammar::types::McIdentifier;
 use crate::parse::{ParseError, Parser, Suggestion};
 use crate::src_in::Source;
@@ -19,6 +18,7 @@ pub enum NbtPathFragment {
     Field(McIdentifier)
 }
 impl Parser for NbtPathFragment {
+    type Out = Self;
     fn get_error(&self, src: &mut Source) -> ParseError {
         todo!()
     }
@@ -45,16 +45,15 @@ impl Display for NbtPath {
 }
 
 #[derive(Display)]
-#[display(fmt = "{{{}, {}}}", key, val)]
 pub enum Nbt {
     Object,
     Array
 }
 
-pub struct NbtArrayElements {
-    elements: Vec<NbtElement>
+pub struct NbtArrayElements<'a> {
+    elements: Vec<NbtElement<'a>>
 }
-impl Display for NbtArrayElements {
+impl<'a> Display for NbtArrayElements<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         for element in &self.elements {
             write!(f, "{},", element).unwrap();
@@ -66,7 +65,7 @@ impl Display for NbtArrayElements {
 #[derive(Display)]
 pub enum NbtElement<'a> {
     #[display(fmt = "[{} {}]", array_type, elements)]
-    Array { array_type: ArrayTypes, elements: NbtArrayElements },
+    Array { array_type: ArrayTypes, elements: NbtArrayElements<'a> },
     #[display(fmt = "{{{}: {}}}", key, val)]
     Object { key: McIdentifier, val: &'a NbtElement<'a>},
     String (&'static str),

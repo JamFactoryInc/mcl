@@ -1,3 +1,4 @@
+use crate::grammar::entity::EntitySelector;
 use crate::translate::bytecode::Instr;
 
 pub type Function = usize;
