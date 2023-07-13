@@ -4,7 +4,7 @@ use crate::translate::bytecode::Instr;
 pub type Function = usize;
 pub enum Variable<'a> {
     Register(usize),
-    Score(EntitySelector),
+    Score(&'a EntitySelector),
     Nbt,
 }
 

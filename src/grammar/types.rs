@@ -33,15 +33,15 @@ impl UnsignedPrimitive for usize {}
 impl<T: UnsignedPrimitive + Display> Parser for T {
     type Out = T;
 
-    fn test(&self, src: &mut Source) -> bool {
+    fn test(src: &mut Source) -> bool {
         match src.peek() {
             b'0'..=b'9' => true,
             _ => false,
         }
     }
 
-    fn parse<'a>(&self, src: &mut Source) -> Result<T, ParseError> {
-        UnsignedPrimitive::parse(self, src)
+    fn parse<'a>(src: &mut Source) -> Result<T, ParseError> {
+        UnsignedPrimitive::parse(src)
     }
 }
 

@@ -25,7 +25,7 @@ impl Source {
 
     #[inline(always)]
     pub fn peek(&self) -> u8 {
-        self.buffer[self.cursor]
+        self.buffer[&self.cursor]
     }
 
     fn inc_cursor(&mut self, current: u8) -> Option<u8> {
