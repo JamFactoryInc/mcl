@@ -2,10 +2,8 @@ extern crate proc_macro;
 
 use proc_macro::*;
 use std::collections::{HashMap};
-use std::fmt::{Debug, Display, Formatter, Write as _};
-use std::ops::Add;
-use std::task::Poll::Pending;
-use quote::quote;
+use std::fmt::{Display, Formatter, Write as _};
+
 
 #[proc_macro]
 pub fn enum_parser(input: TokenStream) -> TokenStream {

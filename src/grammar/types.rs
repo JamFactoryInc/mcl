@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter};
+use std::string::ToString;
 use derive_more::Display;
 use crate::parse::{Optional, ParseError, Parser, Suggestion};
 use crate::src_in::Source;
@@ -32,6 +33,8 @@ impl UnsignedPrimitive for u32 {}
 impl UnsignedPrimitive for usize {}
 impl<T: UnsignedPrimitive + Display> Parser for T {
     type Out = T;
+    type SP = ();
+    const ERR: fn() -> String = || "".to_string();
 
     fn test(src: &mut Source) -> bool {
         match src.peek() {

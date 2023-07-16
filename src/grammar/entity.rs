@@ -1,8 +1,8 @@
+use std::string::ParseError;
 use derive_more::Display;
 use crate::grammar::commands::gamemode::Gamemode;
 use crate::grammar::nbt::Nbt;
 use crate::grammar::types::{DecimalRange, McIdentifier, UDecimalRange};
-use crate::parse::ParseError;
 use crate::src_in::Source;
 use crate::parse::*;
 use crate::parse::unicode::UnicodeToken;

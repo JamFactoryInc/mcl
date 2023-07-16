@@ -1,7 +1,8 @@
 use std::fmt::{Display, Formatter};
+use std::string::ParseError;
 use derive_more::Display;
 use crate::grammar::types::McIdentifier;
-use crate::parse::{ParseError, Parser, Suggestion};
+use crate::parse::{Parser, Suggestion};
 use crate::src_in::Source;
 use crate::vm::LayoutContext;
 
