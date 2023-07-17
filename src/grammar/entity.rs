@@ -1,4 +1,4 @@
-use std::string::ParseError;
+use std::string::{ParseError, ToString};
 use derive_more::Display;
 use crate::grammar::commands::gamemode::Gamemode;
 use crate::grammar::nbt::Nbt;
@@ -40,7 +40,10 @@ pub enum EntitySelectorTarget {
 }
 
 impl Parser for EntitySelectorTarget {
-    type Out = Self;
+
+    type State = ();
+    const ERR: fn() -> String = || "expected one of `@a | @e | @p | @r | @s` or a player name".to_string();
+
     fn get_error(src: &mut Source) -> ParseError {
         ParseError::from(src, "expected one of `@a | @e | @p | @r | @s` or a player name")
     }
@@ -65,10 +68,6 @@ impl Parser for EntitySelectorTarget {
         } else {
             Vec::new()
         }
-    }
-
-    fn test(src: &mut Source) -> bool {
-        todo!()
     }
 
     fn parse(src: &mut Source) {

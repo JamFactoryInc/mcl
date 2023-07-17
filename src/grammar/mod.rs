@@ -6,3 +6,4 @@ pub mod nbt;
 pub mod resource;
 pub mod commands;
 mod whitespace;
+mod primitives;

@@ -1,5 +1,6 @@
 mod allow_skip;
 mod either;
-mod either_x_or;
+mod left_xor_right;
 mod binary_sequence;
 mod sequence;
+mod prefix;
