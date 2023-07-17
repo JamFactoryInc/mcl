@@ -1,9 +1,104 @@
-use std::fmt::{Display, Formatter};
-use std::string::ToString;
+use std::fmt::{Display};
+use std::intrinsics::{likely, unlikely};
+use std::marker::PhantomData;
+use std::ops::{Add, Mul};
+use std::string::{ParseError, ToString};
 use derive_more::Display;
-use crate::parse::{Optional, ParseError, Parser, Suggestion};
+use crate::parse::{MatchResult, Optional, Parser, Stateful, Suggestion};
 use crate::src_in::Source;
 use crate::vm::LayoutContext;
+
+struct Base10UnsignedParserState<T, const MAX: u128> {
+    state: u128,
+    len: usize,
+    _p: PhantomData<T>
+}
+
+impl<T, const MAX: u128> Stateful<T> for Base10UnsignedParserState<T, MAX> {
+    fn new() -> Self {
+        Base10UnsignedParserState::<T, MAX> {
+            state: 0,
+            len: 0,
+            _p: PhantomData
+        }
+    }
+
+    fn parse(&mut self, byte: u8) -> MatchResult<T> {
+        self.state = self.state.clone() * 10 + byte as usize - b'0' as usize;
+        self.len += 1;
+        match byte {
+            b'0'..=b'9' => {
+                if likely(self.state <= MAX) {
+                    MatchResult::Consumed
+                } else {
+                    MatchResult::NoMatch
+                }
+            }
+            _ => {
+                if likely(self.len > 1) {
+                    MatchResult::Parsed(self.state.clone())
+                } else {
+                    MatchResult::NoMatch
+                }
+            }
+        }
+    }
+}
+
+enum SignedState {
+    First,
+    Neg,
+    Pos,
+}
+
+struct SignedParserState<T, const MAX: u128> {
+    number: u128,
+    len: usize,
+    state: SignedState,
+}
+
+impl<T: Parser> Stateful<(bool, T)> for SignedParserState<(bool, T)> {
+    fn new() -> Self {
+        T::State::new()
+    }
+
+    fn parse(&mut self, byte: u8) -> MatchResult<T> {
+        match self.state {
+            SignedState::First => {
+
+            }
+            SignedState::Pos => {
+
+            }
+            SignedState::Neg => {
+
+            }
+        }
+    }
+}
+
+const fn to_u128<T: Into<u128>>(num: T) -> u128 {
+    num as u128
+}
+
+struct U32 { number: u32 }
+impl Parser for U32 {
+    type State = Base10UnsignedParserState<u32, { to_u128(u32::MAX) }>;
+    const ERR: fn() -> String = || "expected number from 0 to 9".to_string();
+}
+
+struct U64 { number: u64 }
+impl Parser for U64 {
+    type State = Base10UnsignedParserState<u64, { to_u128(u64::MAX) }>;
+    const ERR: fn() -> String = || "expected number from 0 to 9".to_string();
+}
+
+struct Stack64 { number: usize }
+impl Parser for Stack64 {
+    type State = Base10UnsignedParserState<usize, 64>;
+    const ERR: fn() -> String = || "expected number from 0 to 9".to_string();
+}
+
 
 trait UnsignedPrimitive {
     fn parse_unsigned<T : Parser>(parser: &T, src: &mut Source) -> Result<T, ParseError> {

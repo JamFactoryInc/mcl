@@ -10,7 +10,7 @@ use crate::util::RawString;
 use MatchResult::*;
 use crate::parse::parse_error::ParseError;
 
-trait Stateful<T> {
+pub trait Stateful<T> {
     fn new() -> Self;
     fn parse(&mut self, byte: u8) -> MatchResult<T>;
 }

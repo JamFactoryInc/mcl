@@ -1,4 +1,4 @@
-#![feature(associated_type_defaults)]
+#![feature(core_intrinsics)]
 extern crate derive_more;
 extern crate enum_parser;
 
