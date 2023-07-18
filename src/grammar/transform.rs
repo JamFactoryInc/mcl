@@ -14,5 +14,5 @@ pub struct Coordinate {
 
 pub struct Rotation {
     x: CoordinateFragment,
-    y: CoordinateFragment
+    y: CoordinateFragment,
 }

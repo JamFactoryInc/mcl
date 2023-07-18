@@ -1,22 +1,22 @@
-use std::string::{ParseError, ToString};
-use derive_more::Display;
 use crate::grammar::commands::gamemode::Gamemode;
 use crate::grammar::nbt::Nbt;
 use crate::grammar::types::{DecimalRange, McIdentifier, UDecimalRange};
-use crate::src_in::Source;
-use crate::parse::*;
 use crate::parse::unicode::UnicodeToken;
+use crate::parse::*;
+use crate::src_in::Source;
 use crate::util::RawString;
 use crate::vm::LayoutContext;
+use derive_more::Display;
+use std::string::{ParseError, ToString};
 
 pub enum ScoreboardEntitySelector {
     FakePlayer(String),
-    EntitySelector(EntitySelector)
+    EntitySelector(EntitySelector),
 }
 
 pub struct EntitySelector {
     target: EntitySelectorTarget,
-    args: Vec<EntitySelectorArg>
+    args: Vec<EntitySelectorArg>,
 }
 
 #[derive(Display)]
@@ -36,16 +36,19 @@ pub enum EntitySelectorTarget {
     /// @s
     #[display(fmt = "@s")]
     AtSelf,
-    Name (RawString),
+    Name(RawString),
 }
 
 impl Parser for EntitySelectorTarget {
-
     type State = ();
-    const ERR: fn() -> String = || "expected one of `@a | @e | @p | @r | @s` or a player name".to_string();
+    const ERR: fn() -> String =
+        || "expected one of `@a | @e | @p | @r | @s` or a player name".to_string();
 
     fn get_error(src: &mut Source) -> ParseError {
-        ParseError::from(src, "expected one of `@a | @e | @p | @r | @s` or a player name")
+        ParseError::from(
+            src,
+            "expected one of `@a | @e | @p | @r | @s` or a player name",
+        )
     }
 
     fn get_suggestions(partial: &[u8]) -> Vec<Suggestion> {
@@ -80,14 +83,15 @@ impl Parser for EntitySelectorTarget {
                     b'p' => Some(Self::AtPlayer),
                     b'r' => Some(Self::AtRandom),
                     b's' => Some(Self::AtSelf),
-                    _ => None
+                    _ => None,
                 };
             }
             x @ _ => {
                 if UnicodeToken::McIdent.matches(x) {
-                    Some(EntitySelectorTarget::Name(
-                        Matchers::repeat(|char| UnicodeToken::McIdent.matches(char), src))
-                    )
+                    Some(EntitySelectorTarget::Name(Matchers::repeat(
+                        |char| UnicodeToken::McIdent.matches(char),
+                        src,
+                    )))
                 } else {
                     None
                 };
@@ -99,15 +103,15 @@ impl Parser for EntitySelectorTarget {
 
 pub enum EntitySelectorArg {
     Advancements,
-    Distance (UDecimalRange),
-    Dx (DecimalRange),
-    Dy (DecimalRange),
-    Dz (DecimalRange),
-    Gamemode (Gamemode),
-    Level (i32),
-    Limit (i32),
-    Name (McIdentifier),
-    Nbt (Nbt),
+    Distance(UDecimalRange),
+    Dx(DecimalRange),
+    Dy(DecimalRange),
+    Dz(DecimalRange),
+    Gamemode(Gamemode),
+    Level(i32),
+    Limit(i32),
+    Name(McIdentifier),
+    Nbt(Nbt),
     Predicate,
     Scores,
     Sort,

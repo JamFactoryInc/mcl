@@ -1,9 +1,10 @@
+use crate::parse::parse_error::ParseError;
+use futures::executor::block_on;
 use std::fs::File;
 use std::future::Future;
 use std::io::{BufReader, Read};
 use std::mem;
 use std::pin::Pin;
-use futures::executor::block_on;
 
 pub struct Source {
     pub absolute_index: usize,
@@ -18,6 +19,14 @@ pub struct Source {
 }
 
 impl Source {
+    pub fn err(&self, message: &'static str) -> ParseError {
+        ParseError {
+            line: self.line.clone(),
+            index: self.current_line.len(),
+            absolute_index: self.absolute_index.clone(),
+            message,
+        }
+    }
 
     pub fn get_index(&self) -> usize {
         self.current_line.len()
@@ -32,7 +41,7 @@ impl Source {
         if self.cursor < self.max_index {
             self.cursor += 1;
         } else if self.cursor == self.max_index {
-            return None
+            return None;
         } else {
             self.cursor = 0;
             let new_max_index = block_on((self.read_promise).take().unwrap());
@@ -42,8 +51,7 @@ impl Source {
                     mem::swap(&mut self.buffer, &mut self.buffer_next);
                     //self.read_promise = Some(Box::pin(self.buffer_next()));
                     //self.max_index = len;
-
-                },
+                }
             };
         }
         Some(current)
@@ -54,7 +62,7 @@ impl Source {
             b'\n' => {
                 self.current_line.clear();
                 self.line += 1;
-            },
+            }
             _ => {
                 self.absolute_index += 1;
                 self.current_line.push(next)
@@ -64,10 +72,8 @@ impl Source {
 
     async fn buffer_next(&mut self) -> usize {
         match self.reader.read(&mut self.buffer_next) {
-            Ok(bytes) => {
-                bytes - 1
-            },
-            Err(_) => usize::MAX
+            Ok(bytes) => bytes - 1,
+            Err(_) => usize::MAX,
         }
     }
 }

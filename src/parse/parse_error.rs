@@ -1,19 +1,18 @@
 use crate::src_in::Source;
 
-
 pub struct ParseError {
-    line: usize,
-    index: usize,
-    absolute_index: usize,
-    message_src: fn() -> String,
+    pub line: usize,
+    pub index: usize,
+    pub absolute_index: usize,
+    pub message: &'static str,
 }
 impl ParseError {
-    pub fn from(src: &Source, msg: fn() -> String) -> ParseError {
+    pub fn from(src: &Source, msg: &'static str) -> ParseError {
         ParseError {
             line: src.line.clone(),
             index: src.get_index(),
             absolute_index: src.absolute_index.clone(),
-            message_src: msg
+            message: msg,
         }
     }
 }

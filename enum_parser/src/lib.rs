@@ -1,13 +1,11 @@
 extern crate proc_macro;
 
 use proc_macro::*;
-use std::collections::{HashMap};
+use std::collections::HashMap;
 use std::fmt::{Display, Formatter, Write as _};
-
 
 #[proc_macro]
 pub fn enum_parser(input: TokenStream) -> TokenStream {
-
     let src = input.to_string();
     let mut out_src = String::new();
 
@@ -19,12 +17,12 @@ pub fn enum_parser(input: TokenStream) -> TokenStream {
 
     write!(out_src, "{}", gen_parser(&name, &ident_str, &char_tree)).unwrap();
 
-    format!("println!(\"{{}}\", r#\"{}\"#);", out_src).parse().unwrap()
-
+    format!("println!(\"{{}}\", r#\"{}\"#);", out_src)
+        .parse()
+        .unwrap()
 }
 
 fn get_name_and_ident_string_tuples(src: String) -> (String, Vec<(String, String)>) {
-
     let mut in_string = false;
     let mut escaped = false;
 
@@ -41,24 +39,23 @@ fn get_name_and_ident_string_tuples(src: String) -> (String, Vec<(String, String
     let mut prev_byte = 0u8;
 
     for c in src.bytes() {
-
         if in_string {
             if escaped && (c == b'"' || c == b'\\') {
                 match c {
                     b'"' => ident.extend(b"Quote"),
                     b'\\' => ident.extend(b"BackSlash"),
-                    _ => ()
+                    _ => (),
                 }
             } else {
                 match c {
-                    b'A'..= b'Z' | b'a'..= b'z' | b'_' => {
+                    b'A'..=b'Z' | b'a'..=b'z' | b'_' => {
                         contains_alpha = true;
                         if prev_byte.is_ascii_digit() || prev_byte == b'_' {
                             ident.push(c.to_ascii_uppercase());
                         } else {
                             ident.push(c);
                         }
-                    },
+                    }
                     b'0'..=b'9' => {
                         if is_first_ident {
                             ident.push(b'_');
@@ -67,19 +64,21 @@ fn get_name_and_ident_string_tuples(src: String) -> (String, Vec<(String, String
                     }
                     b'<' => ident.extend(b"Lt"),
                     b'>' => ident.extend(b"Gt"),
-                    b'=' => {
-                        match prev_byte {
-                            b'-' => {
-                                ident.pop();ident.pop();ident.pop();
-                                ident.extend(b"Sub")
-                            },
-                            b'+' => {
-                                ident.pop();ident.pop();ident.pop();
-                                ident.extend(b"Add")
-                            },
-                            b'=' => ident.extend(b"uals"),
-                            _ => ident.extend(b"Eq")
+                    b'=' => match prev_byte {
+                        b'-' => {
+                            ident.pop();
+                            ident.pop();
+                            ident.pop();
+                            ident.extend(b"Sub")
                         }
+                        b'+' => {
+                            ident.pop();
+                            ident.pop();
+                            ident.pop();
+                            ident.extend(b"Add")
+                        }
+                        b'=' => ident.extend(b"uals"),
+                        _ => ident.extend(b"Eq"),
                     },
                     b'!' => ident.extend(b"Not"),
                     b'^' => ident.extend(b"Xor"),
@@ -87,22 +86,26 @@ fn get_name_and_ident_string_tuples(src: String) -> (String, Vec<(String, String
                         if prev_byte == 0 {
                             ident.extend(b"Neg")
                         } else if prev_byte == b'-' {
-                            ident.pop();ident.pop();ident.pop();
+                            ident.pop();
+                            ident.pop();
+                            ident.pop();
                             ident.extend(b"Dec")
                         } else if !contains_alpha {
                             ident.extend(b"Sub")
                         }
-                    },
+                    }
                     b'+' => {
                         if prev_byte == 0 {
                             ident.extend(b"Pos");
                         } else if prev_byte == b'+' {
-                            ident.pop();ident.pop();ident.pop();
+                            ident.pop();
+                            ident.pop();
+                            ident.pop();
                             ident.extend(b"Inc")
                         } else {
                             ident.extend(b"Add")
                         }
-                    },
+                    }
                     b'*' => ident.extend(b"Mul"),
                     b'/' => ident.extend(b"Div"),
                     b'%' => ident.extend(b"Mod"),
@@ -123,12 +126,12 @@ fn get_name_and_ident_string_tuples(src: String) -> (String, Vec<(String, String
                         if prev_byte != b'&' {
                             ident.extend(b"And")
                         }
-                    },
+                    }
                     b'|' => {
                         if prev_byte != b'|' {
                             ident.extend(b"Or")
                         }
-                    },
+                    }
 
                     b'"' => {
                         contains_alpha = false;
@@ -143,15 +146,15 @@ fn get_name_and_ident_string_tuples(src: String) -> (String, Vec<(String, String
                         raw_string = Vec::new();
 
                         tuples.push((ident_parsed, raw_string_parsed));
-                        continue
-                    },
+                        continue;
+                    }
                     b'\\' => {
                         escaped = true;
                         prev_byte = c;
                         raw_string.push(c);
-                        continue
+                        continue;
                     }
-                    _ => continue
+                    _ => continue,
                 }
             }
             raw_string.push(c);
@@ -163,8 +166,8 @@ fn get_name_and_ident_string_tuples(src: String) -> (String, Vec<(String, String
                     in_string = true;
                     prev_byte = 0;
                     continue;
-                },
-                b'A' ..= b'Z' | b'a' ..= b'z' | b'0' ..= b'9' | b'_' => name.push(c),
+                }
+                b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'_' => name.push(c),
                 _ => (),
             }
         }
@@ -192,8 +195,13 @@ fn gen_enum(enum_name: &String, ident_string_tuples: &Vec<(String, String)>) -> 
     src_out
 }
 
-fn gen_parser(enum_name: &String, ident_string_tuples:  &Vec<(String, String)>, char_tree: &CharTree) -> String {
-    format!(r#"
+fn gen_parser(
+    enum_name: &String,
+    ident_string_tuples: &Vec<(String, String)>,
+    char_tree: &CharTree,
+) -> String {
+    format!(
+        r#"
 impl Parser<> for {} {{
     fn get_error(&self, src: &mut Source) -> ParseError {{
         {}
@@ -210,10 +218,10 @@ impl Parser<> for {} {{
     }}
 }}
 "#,
-            enum_name,
-            gen_get_error(&enum_name, &ident_string_tuples),
-            gen_get_suggestions(&enum_name, &ident_string_tuples),
-            gen_parse(&enum_name, char_tree)
+        enum_name,
+        gen_get_error(&enum_name, &ident_string_tuples),
+        gen_get_suggestions(&enum_name, &ident_string_tuples),
+        gen_parse(&enum_name, char_tree)
     )
 }
 
@@ -243,15 +251,24 @@ struct FlattenedChar {
 }
 impl Display for FlattenedChar {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "complete: {}, prev: {}, cumulative: \\\"{}\\\", next: ",
-            match &self.complete { Some(x) => x, _ => "None" },
-            match self.prev { Some(x) => x.to_string(), _ => "None".to_string() },
+        write!(
+            f,
+            "complete: {}, prev: {}, cumulative: \\\"{}\\\", next: ",
+            match &self.complete {
+                Some(x) => x,
+                _ => "None",
+            },
+            match self.prev {
+                Some(x) => x.to_string(),
+                _ => "None".to_string(),
+            },
             self.cumulative,
-        ).unwrap();
+        )
+        .unwrap();
 
         for (k, v) in &self.next {
             write!(f, "({} : {})", *k as char, v).unwrap();
-        };
+        }
 
         Ok(())
     }
@@ -261,7 +278,7 @@ struct CharTree {
     contents: Vec<FlattenedChar>,
 }
 impl CharTree {
-    fn construct(strings:&Vec<(String, String)>) -> CharTree {
+    fn construct(strings: &Vec<(String, String)>) -> CharTree {
         let mut char_tree = CharTree {
             contents: vec![FlattenedChar {
                 complete: None,
@@ -283,7 +300,7 @@ impl CharTree {
                         complete: None,
                         next: HashMap::new(),
                         prev: Some(current),
-                        cumulative: raw_str[0..i + 1].to_string()
+                        cumulative: raw_str[0..i + 1].to_string(),
                     });
                     current = index;
                 } else {
@@ -298,7 +315,6 @@ impl CharTree {
 }
 
 fn gen_match(enum_name: &String, char_tree: &CharTree, start_index: usize, depth: usize) -> String {
-
     let mut src_out = String::new();
     let curr = &char_tree.contents[start_index];
     let __ = "   |".repeat(depth - 1);
@@ -312,24 +328,39 @@ fn gen_match(enum_name: &String, char_tree: &CharTree, start_index: usize, depth
                 write!(src_out, "match src.peek() {{\n").unwrap();
                 for c in curr.next.keys() {
                     write!(src_out, "{__}b'{}' => {{\n", *c as char).unwrap();
-                    write!(src_out, "{___}src.next();\n" ).unwrap();
-                    write!(src_out, "{___}{};\n", gen_match(enum_name, char_tree, curr.next[c], depth + 1)).unwrap();
+                    write!(src_out, "{___}src.next();\n").unwrap();
+                    write!(
+                        src_out,
+                        "{___}{};\n",
+                        gen_match(enum_name, char_tree, curr.next[c], depth + 1)
+                    )
+                    .unwrap();
                     write!(src_out, "{__}}},\n").unwrap();
                 }
-                write!(src_out, "{___}_ => Instr::{enum_name}({enum_name}::{ident}),\n").unwrap();
+                write!(
+                    src_out,
+                    "{___}_ => Instr::{enum_name}({enum_name}::{ident}),\n"
+                )
+                .unwrap();
                 write!(src_out, "{__}}}",).unwrap();
             } else {
                 write!(src_out, "Instr::{enum_name}({enum_name}::{ident})").unwrap();
             }
-        },
+        }
         None => {
             write!(src_out, "match src.next() {{\n").unwrap();
             for c in curr.next.keys() {
-                write!(src_out, "{___}b'{}' => {},\n", *c as char, gen_match(enum_name, char_tree, curr.next[c], depth + 1)).unwrap();
+                write!(
+                    src_out,
+                    "{___}b'{}' => {},\n",
+                    *c as char,
+                    gen_match(enum_name, char_tree, curr.next[c], depth + 1)
+                )
+                .unwrap();
             }
             write!(src_out, "{___}_ => Instr::ParseError{{ error: &'a self.get_error(src), suggestion: &'a self.get_suggestions(b\"{}\")}},\n", curr.cumulative).unwrap();
             write!(src_out, "{__}}}").unwrap();
-        },
+        }
     }
 
     src_out

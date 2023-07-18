@@ -16,7 +16,7 @@ pub struct Layout<'a> {
 
 pub struct LayoutContext<'a> {
     layout: &'a mut Layout<'a>,
-    instructions: Vec<Instr<'a>>
+    instructions: Vec<Instr<'a>>,
 }
 
 impl<'a> LayoutContext<'a> {
@@ -28,12 +28,11 @@ impl<'a> LayoutContext<'a> {
     pub fn add_setup(&mut self, instruction: Instr<'a>) {
         self.layout.setup.push(instruction)
     }
-
 }
 
 pub struct McFunction<'a> {
     parent: usize,
     checksum: u128,
     name: String,
-    instructions: Vec<Instr<'a>>
+    instructions: Vec<Instr<'a>>,
 }

@@ -41,11 +41,14 @@ pub enum UnicodeToken {
     /// `[A-z_0-9]`
     Ident,
     /// Matches anything other than the provided char
-    Not (u8),
+    Not(u8),
     /// Matches only the provided char
-    Literal (u8),
+    Literal(u8),
 }
-pub trait AsciiUtils<T = Self> where Self: Sized + PartialOrd {
+pub trait AsciiUtils<T = Self>
+where
+    Self: Sized + PartialOrd,
+{
     #[inline(always)]
     fn between(self, lower: Self, upper: Self) -> bool {
         self >= lower && self <= upper
@@ -69,8 +72,16 @@ impl UnicodeToken {
             Self::LogicSymbol => char == b'!' || char == b'&' || char == b'|',
             Self::Brace => char == b'{' || char == b'}',
             Self::Paren => char == b'(' || char == b')',
-            Self::Resource => char.between(b'-', b':') || char.is_ascii_alphabetic() || char == b'_',
-            Self::McIdent => char.is_ascii_alphanumeric() || char == b'.' || char == b'+' || char == b'-' || char == b'_',
+            Self::Resource => {
+                char.between(b'-', b':') || char.is_ascii_alphabetic() || char == b'_'
+            }
+            Self::McIdent => {
+                char.is_ascii_alphanumeric()
+                    || char == b'.'
+                    || char == b'+'
+                    || char == b'-'
+                    || char == b'_'
+            }
             Self::ScoreVariableFirst => char.between(b'A', b'~') || char.between(b'!', b'?'),
             Self::IdentFirst => char.is_ascii_alphabetic() || char == b'_',
             Self::Ident => char.is_ascii_alphanumeric() || char == b'_',
@@ -98,7 +109,9 @@ impl UnicodeToken {
             Self::Paren => "expected '(' or ')'",
             Self::Resource => "expected an alphanumeric character, ':', '/', '-', or '_'",
             Self::McIdent => "expected an alphanumeric character, ':', '/', '-', '+', or '_'",
-            Self::ScoreVariableFirst => "expected any non-whitespace, non-control ascii character other than '@'",
+            Self::ScoreVariableFirst => {
+                "expected any non-whitespace, non-control ascii character other than '@'"
+            }
             Self::IdentFirst => "expected any alpha character or '_'",
             Self::Ident => "expected any alphanumeric character or '_'",
             Self::Not(_) => "",

@@ -1,10 +1,10 @@
-use std::fmt::{Display, Formatter};
-use std::string::ParseError;
-use derive_more::Display;
 use crate::grammar::types::McIdentifier;
 use crate::parse::{Parser, Suggestion};
 use crate::src_in::Source;
 use crate::vm::LayoutContext;
+use derive_more::Display;
+use std::fmt::{Display, Formatter};
+use std::string::ParseError;
 
 #[derive(Display)]
 pub enum NbtPathFragment {
@@ -16,7 +16,7 @@ pub enum NbtPathFragment {
     Expand,
     #[display(fmt = "[{}]", "_0")]
     Lookup(Nbt),
-    Field(McIdentifier)
+    Field(McIdentifier),
 }
 impl Parser for NbtPathFragment {
     type Out = Self;
@@ -34,7 +34,7 @@ impl Parser for NbtPathFragment {
 }
 
 pub struct NbtPath {
-    path: Vec<NbtPathFragment>
+    path: Vec<NbtPathFragment>,
 }
 impl Display for NbtPath {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -48,11 +48,11 @@ impl Display for NbtPath {
 #[derive(Display)]
 pub enum Nbt {
     Object,
-    Array
+    Array,
 }
 
 pub struct NbtArrayElements<'a> {
-    elements: Vec<NbtElement<'a>>
+    elements: Vec<NbtElement<'a>>,
 }
 impl<'a> Display for NbtArrayElements<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -66,21 +66,27 @@ impl<'a> Display for NbtArrayElements<'a> {
 #[derive(Display)]
 pub enum NbtElement<'a> {
     #[display(fmt = "[{} {}]", array_type, elements)]
-    Array { array_type: ArrayTypes, elements: NbtArrayElements<'a> },
+    Array {
+        array_type: ArrayTypes,
+        elements: NbtArrayElements<'a>,
+    },
     #[display(fmt = "{{{}: {}}}", key, val)]
-    Object { key: McIdentifier, val: &'a NbtElement<'a>},
-    String (&'static str),
+    Object {
+        key: McIdentifier,
+        val: &'a NbtElement<'a>,
+    },
+    String(&'static str),
     #[display(fmt = "{}l", "_0")]
-    Long (usize),
-    Int (usize),
+    Long(usize),
+    Int(usize),
     #[display(fmt = "{}s", "_0")]
-    Short (usize),
+    Short(usize),
     #[display(fmt = "{}b", "_0")]
-    Byte (usize),
+    Byte(usize),
     #[display(fmt = "{}d", "_0")]
-    Double (f64),
+    Double(f64),
     #[display(fmt = "{}f", "_0")]
-    Float (f32),
+    Float(f32),
 }
 
 #[derive(Display)]
@@ -92,5 +98,5 @@ pub enum ArrayTypes {
     #[display(fmt = "L; ")]
     Long,
     #[display(fmt = "B; ")]
-    Byte
+    Byte,
 }

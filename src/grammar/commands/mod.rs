@@ -7,18 +7,18 @@ use crate::grammar::types::*;
 
 pub enum CommandFragment {
     Keyword { command: &'static str },
-    McIdentifier (McIdentifier),
-    Decimal (Decimal),
-    UDecimal (UDecimal),
-    Range (Range),
-    URange (URange),
-    UDecimalRange (UDecimalRange),
-    NBT (Box<Nbt>),
-    UInt (usize),
-    Int (usize),
-    StackSize (usize),
-    Rotation (Rotation),
-    Coordinate (Coordinate),
+    McIdentifier(McIdentifier),
+    Decimal(Decimal),
+    UDecimal(UDecimal),
+    Range(Range),
+    URange(URange),
+    UDecimalRange(UDecimalRange),
+    NBT(Box<Nbt>),
+    UInt(usize),
+    Int(usize),
+    StackSize(usize),
+    Rotation(Rotation),
+    Coordinate(Coordinate),
 }
 
 pub enum Command {

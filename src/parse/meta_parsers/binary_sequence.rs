@@ -1,9 +1,13 @@
-use derive_more::Display;
 use crate::parse::*;
+use derive_more::Display;
 
 #[derive(Display)]
 #[display(fmt = "{}{}", first, second)]
-pub struct BinarySequence<_1, _2> where _1: Parser, _2: Parser {
+pub struct BinarySequence<_1, _2>
+where
+    _1: Parser,
+    _2: Parser,
+{
     first: _1,
     second: _2,
 }
@@ -32,37 +36,33 @@ impl<_1: Parser, _2: Parser> Stateful<BinarySequence<_1, _2>> for ParserState<_1
 
     fn parse(&mut self, byte: u8) -> MatchResult<BinarySequence<_1, _2>> {
         match self.state {
-            State::First => {
-                match self.state_1.parse(byte) {
-                    Consumed => Consumed,
-                    Oops(first) | Parsed(first) => {
-                        self.parsed_1 = Some(first);
-                        self.state = State::Second;
-                        Consumed
-                    },
-                    NoMatch => NoMatch
+            State::First => match self.state_1.parse(byte) {
+                Consumed => Consumed,
+                Oops(first) | Parsed(first) => {
+                    self.parsed_1 = Some(first);
+                    self.state = State::Second;
+                    Consumed
                 }
-            }
-            State::Second => {
-                match self.state_2.parse(byte) {
-                    Consumed => Consumed,
-                    Oops(second) => {
-                        self.state = State::Second;
-                        Oops(BinarySequence {
-                            first: self.parsed_1.unwrap(),
-                            second,
-                        })
-                    },
-                    Parsed(second) => {
-                        self.state = State::Second;
-                        Parsed(BinarySequence {
-                            first: self.parsed_1.unwrap(),
-                            second,
-                        })
-                    },
-                    NoMatch => NoMatch
+                NoMatch => NoMatch,
+            },
+            State::Second => match self.state_2.parse(byte) {
+                Consumed => Consumed,
+                Oops(second) => {
+                    self.state = State::Second;
+                    Oops(BinarySequence {
+                        first: self.parsed_1.unwrap(),
+                        second,
+                    })
                 }
-            }
+                Parsed(second) => {
+                    self.state = State::Second;
+                    Parsed(BinarySequence {
+                        first: self.parsed_1.unwrap(),
+                        second,
+                    })
+                }
+                NoMatch => NoMatch,
+            },
         }
     }
 }
