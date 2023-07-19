@@ -1,7 +1,10 @@
-use crate::parse::MatchResult::{Consumed, NoMatch, Oops, Parsed};
+use crate::parse::MatchResult::{Consumed, NoMatch, Parsed};
 use crate::parse::{MatchResult, Parser, Stateful};
 use std::intrinsics::likely;
 use std::marker::PhantomData;
+use std::simd::u8x8;
+use crate::util::ascii_simd::producing_mask::AsciiUtilsProducingMask;
+use crate::util::ascii_simd::producing_simd::AsciiUtilsProducingSimd;
 
 pub struct UnsignedParserState<T, const MAX: u64> {
     number: u64,
@@ -20,34 +23,38 @@ impl<T, const MAX: u64> Stateful for UnsignedParserState<T, MAX> {
         }
     }
 
-    fn parse(&mut self, byte: u8) -> MatchResult<T> {
+    fn parse(&mut self, bytes: u8x8) -> MatchResult<T> {
         let prev = self.number.clone();
-        self.number = self
-            .number
-            .wrapping_mul(10)
-            .wrapping_add(((byte as usize) - (b'0' as usize)) as u64);
-        self.len += 1;
+        bytes.ascii_hex_digit()
 
-        match byte {
-            b'0'..=b'9' => Consumed,
-            _ => {
-                // make sure the number we parsed fits in a u64 and is at least 1 character
-                if likely(
-                    self.len > 1
-                        && self.len <= u64::MAX.ilog10() as usize
-                        && prev <= self.number
-                        && self.number <= MAX,
-                ) {
-                    Oops(self.number.clone())
-                } else {
-                    if self.len == 0 {
-                        NoMatch("expected number literal")
-                    } else {
-                        NoMatch("number literal is too long")
-                    }
-                }
-            }
-        }
+        todo!()
+
+        // self.number = self
+        //     .number
+        //     .wrapping_mul(10)
+        //     .wrapping_add(((byte as usize) - (b'0' as usize)) as u64);
+        // self.len += 1;
+        //
+        // match byte {
+        //     b'0'..=b'9' => Consumed,
+        //     _ => {
+        //         // make sure the number we parsed fits in a u64 and is at least 1 character
+        //         if likely(
+        //             self.len > 1
+        //                 && self.len <= u64::MAX.ilog10() as usize
+        //                 && prev <= self.number
+        //                 && self.number <= MAX,
+        //         ) {
+        //             Oops(self.number.clone())
+        //         } else {
+        //             if self.len == 0 {
+        //                 NoMatch("expected number literal")
+        //             } else {
+        //                 NoMatch("number literal is too long")
+        //             }
+        //         }
+        //     }
+        // }
     }
 }
 

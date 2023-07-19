@@ -8,8 +8,8 @@ mod grammar;
 mod parse;
 mod src_in;
 mod translate;
-mod util;
 mod vm;
+mod util;
 
 fn main() {
     enum_parser::enum_parser!(

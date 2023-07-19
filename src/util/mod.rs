@@ -1,3 +1,5 @@
+pub mod ascii_simd;
+
 use std::fmt::{Display, Formatter};
 
 pub struct RawString {

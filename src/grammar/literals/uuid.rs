@@ -1,7 +1,8 @@
 use std::intrinsics::{likely, unlikely};
+use std::ops::{BitAnd, Index, Rem, Sub};
 use crate::grammar::literals::uuid::UUIDState::*;
 use crate::parse::{MatchResult, Stateful};
-use std::simd::{Mask, mask8x8, u8x8};
+use std::simd::{Mask, mask8x8, SimdOrd, SimdPartialEq, SimdUint, ToBitMask, u8x8};
 
 enum UUIDState {
     Hex1,
@@ -15,7 +16,14 @@ enum UUIDState {
     Hex5,
 }
 
-const ASCII_DIGIT_MASK: mask8x8 = Mask::fr;
+const ASCII_DIGIT_MASK: usize = 0x40;
+const SIMD_CHAR_0: u8x8 = u8x8::from([b'0'; 8]);
+const SIMD_CHAR_9: u8x8 = u8x8::from([b'9'; 8]);
+const SIMD_ALPHA_BLOCK_START: u8x8 = u8x8::from([b'@'; 8]);
+const SIMD_UPPER_A: u8x8 = u8x8::from([b'A'; 8]);
+const SIMD_1: u8x8 = u8x8::from([1; 8]);
+const SIMD_26: u8x8 = u8x8::from([26; 8]);
+const SIMD_32: u8x8 = u8x8::from([32; 8]);
 
 struct UUIDParserState {
     hex_size: usize,
@@ -23,10 +31,14 @@ struct UUIDParserState {
     state: UUIDState,
 }
 impl UUIDParserState {
-    fn parse_hex<const LEN: usize>(bytes: u8x8) {
-        let wow = &bytes[0];
-        let decimal_value =
-            ((byte as usize) & ASCII_DIGIT_MASK) / (b'0' as usize - 1)
+    fn parse_hex(bytes: u8x8) -> u64 {
+        let masked: u8x8 = bytes & ASCII_DIGIT_MASK;
+        let decimal = masked.simd_clamp(SIMD_CHAR_0, SIMD_CHAR_9)
+            .sub(SIMD_CHAR_0);
+        let hex = masked.rem(SIMD_ALPHA_BLOCK_START)
+            .clamp(SIMD_1, SIMD_26)
+            .sub(SIMD_26);
+
     }
 }
 

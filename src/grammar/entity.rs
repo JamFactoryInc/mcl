@@ -4,7 +4,7 @@ use crate::grammar::types::{DecimalRange, McIdentifier, UDecimalRange};
 use crate::parse::unicode::UnicodeToken;
 use crate::parse::*;
 use crate::src_in::Source;
-use crate::util::RawString;
+use crate::r#mod::RawString;
 use crate::vm::LayoutContext;
 use derive_more::Display;
 use std::string::{ParseError, ToString};

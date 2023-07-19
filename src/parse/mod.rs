@@ -4,16 +4,16 @@ pub mod unicode;
 
 use crate::parse::parse_error::ParseError;
 use crate::src_in::Source;
-use crate::util::RawString;
 use std::fmt::{Display, Formatter};
 use std::intrinsics::likely;
 use std::marker::PhantomData;
+use std::simd::u8x8;
 use MatchResult::*;
 
 pub trait Stateful {
     type Out;
     fn new() -> Self;
-    fn parse(&mut self, byte: u8) -> MatchResult<Self::Out>;
+    fn parse(&mut self, bytes: u8x8) -> MatchResult<Self::Out>;
 }
 pub struct ParserState<T> {
     state: usize,
@@ -42,10 +42,8 @@ impl<T: Parser> From<Option<T>> for Optional<T> {
 }
 
 pub enum MatchResult<Ok> {
-    Parsed(Ok),
-    Consumed,
-    /// The last `Consumed` should have been `Parsed`
-    Oops(Ok),
+    Parsed(usize, Ok),
+    Consumed(usize),
     /// Indicates that the current byte results in a parse error
     NoMatch(&'static str),
 }
