@@ -10,6 +10,7 @@ mod src_in;
 mod translate;
 mod vm;
 mod util;
+mod language_server;
 
 fn main() {
     enum_parser::enum_parser!(
