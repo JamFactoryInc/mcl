@@ -9,3 +9,5 @@ edition = "2021"
 derive_more = "0.99.17"
 enum_parser = { path = "./enum_parser"}
 futures = "0.3.28"
+lsp-types = "0.94.0"
+jsonrpc-core = "18.0.0"

@@ -11,6 +11,7 @@ mod translate;
 mod vm;
 mod util;
 mod language_server;
+mod compiler;
 
 fn main() {
     enum_parser::enum_parser!(
