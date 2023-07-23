@@ -1,6 +1,8 @@
 #![feature(core_intrinsics)]
 #![feature(generic_const_exprs)]
 #![feature(portable_simd)]
+#![feature(associated_type_defaults)]
+#![feature(adt_const_params)]
 extern crate derive_more;
 extern crate enum_parser;
 

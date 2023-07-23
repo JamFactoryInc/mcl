@@ -3,8 +3,6 @@ use crate::parse::{MatchResult, Parser, Stateful};
 use std::intrinsics::likely;
 use std::marker::PhantomData;
 use std::simd::u8x8;
-use crate::util::ascii_simd::producing_mask::AsciiUtilsProducingMask;
-use crate::util::ascii_simd::producing_simd::AsciiUtilsProducingSimd;
 
 pub struct UnsignedParserState<T, const MAX: u64> {
     number: u64,

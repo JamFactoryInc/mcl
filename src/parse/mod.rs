@@ -7,8 +7,12 @@ use crate::src_in::Source;
 use std::fmt::{Display, Formatter};
 use std::intrinsics::likely;
 use std::marker::PhantomData;
-use std::simd::u8x8;
+use std::simd::{Simd, SimdPartialEq, u8x8};
 use MatchResult::*;
+
+pub const SIMD_LANE_SIZE: usize = 8;
+pub type StdSimd = Simd<u8, SIMD_LANE_SIZE>;
+pub type StdMask = <Simd<u8, SIMD_LANE_SIZE> as SimdPartialEq>::Mask;
 
 pub trait Stateful {
     type Out;
