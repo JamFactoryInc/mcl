@@ -1,5 +1,5 @@
 use crate::parse::MatchResult::*;
-use crate::parse::{MatchResult, Optional, Parser, Stateful};
+use crate::parse::{MatchResult, Optional, Parser, Stateful, StdSimd};
 use std::intrinsics::likely;
 use crate::grammar::literals::numeric::decimal::{Decimal, UDecimal};
 
@@ -28,15 +28,15 @@ impl<T: Parser> Stateful for RangeParserState<T> {
         }
     }
 
-    fn parse(&mut self, byte: u8) -> MatchResult<Range<T>> {
+    fn parse(&mut self, bytes: StdSimd) -> MatchResult<Self::Out> {
         match self.state {
-            RangeState::From => match self.parser.parse(byte) {
+            RangeState::From => match self.parser.parse(bytes) {
                 Consumed => {
-                    self.seen_dot = byte == b'.';
+                    self.seen_dot = bytes == b'.';
                     Consumed
                 },
                 Parsed(ok) | Oops(ok) => {
-                    self.seen_dot = byte == b'.';
+                    self.seen_dot = bytes == b'.';
                     self.parsed_first = Some(ok);
                     self.state = RangeState::Middle;
                     self.parser = T::State::new();
@@ -45,7 +45,7 @@ impl<T: Parser> Stateful for RangeParserState<T> {
                 NoMatch(msg) => NoMatch(msg),
             },
             RangeState::Middle => {
-                if likely(byte == b'.') {
+                if likely(bytes == b'.') {
                     if self.seen_dot {
                         self.state = RangeState::To;
                     }
@@ -55,7 +55,7 @@ impl<T: Parser> Stateful for RangeParserState<T> {
                     NoMatch("range `..` expected")
                 }
             }
-            RangeState::To => self.parser.parse(byte)
+            RangeState::To => self.parser.parse(bytes)
                 .bubble(|ok: T::State::Out| Range::<T> {
                 from: self.parsed_first.take() as Optional<T>,
                 to: ok,

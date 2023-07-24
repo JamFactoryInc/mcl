@@ -36,9 +36,9 @@ impl<Opt: Parser, Req: Parser> Stateful<AllowSkip<Opt, Req>> for ParserState<Opt
         }
     }
 
-    fn parse(&mut self, byte: u8) -> MatchResult<AllowSkip<Opt, Req>> {
+    fn parse(&mut self, bytes: StdSimd) -> MatchResult<Self::Out> {
         match self.state {
-            State::ParsedReq => match self.opt_state.parse(byte) {
+            State::ParsedReq => match self.opt_state.parse(bytes) {
                 Parsed(opt) => Parsed(AllowSkip {
                     opt: Optional::Some(opt),
                     req: self.parsed_req.unwrap(),
@@ -50,7 +50,7 @@ impl<Opt: Parser, Req: Parser> Stateful<AllowSkip<Opt, Req>> for ParserState<Opt
                 Consumed => Consumed,
                 NoMatch => NoMatch,
             },
-            State::ParsedOpt => match self.req_state.parse(byte) {
+            State::ParsedOpt => match self.req_state.parse(bytes) {
                 Parsed(req) => Parsed(AllowSkip {
                     opt: self.parsed_opt.into(),
                     req,
@@ -62,8 +62,8 @@ impl<Opt: Parser, Req: Parser> Stateful<AllowSkip<Opt, Req>> for ParserState<Opt
                 Consumed => Consumed,
                 NoMatch => NoMatch,
             },
-            State::Normal => match self.opt_state.parse(byte.clone()) {
-                Consumed => match self.req_state.parse(byte) {
+            State::Normal => match self.opt_state.parse(bytes.clone()) {
+                Consumed => match self.req_state.parse(bytes) {
                     Consumed => Consumed,
                     Parsed(req) | Oops(req) => {
                         self.parsed_req = Some(req);
@@ -72,7 +72,7 @@ impl<Opt: Parser, Req: Parser> Stateful<AllowSkip<Opt, Req>> for ParserState<Opt
                     }
                     NoMatch => NoMatch,
                 },
-                Oops(opt) => match self.req_state.parse(byte) {
+                Oops(opt) => match self.req_state.parse(bytes) {
                     Consumed => {
                         self.parsed_opt = Some(opt);
                         self.state = State::ParsedOpt;
@@ -88,7 +88,7 @@ impl<Opt: Parser, Req: Parser> Stateful<AllowSkip<Opt, Req>> for ParserState<Opt
                     }),
                     NoMatch => NoMatch,
                 },
-                Parsed(opt) => match self.req_state.parse(byte) {
+                Parsed(opt) => match self.req_state.parse(bytes) {
                     Consumed => {
                         self.parsed_opt = Some(opt);
                         self.state = State::ParsedOpt;
@@ -100,7 +100,7 @@ impl<Opt: Parser, Req: Parser> Stateful<AllowSkip<Opt, Req>> for ParserState<Opt
                     }),
                     NoMatch => NoMatch,
                 },
-                NoMatch => match self.req_state.parse(byte) {
+                NoMatch => match self.req_state.parse(bytes) {
                     Consumed => {
                         self.state = State::ParsedOpt;
                         Consumed

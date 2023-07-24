@@ -1,6 +1,6 @@
 use crate::parse::meta_parsers::allow_skip::AllowSkip;
 use crate::parse::meta_parsers::either::Either;
-use crate::parse::{Parser, Stateful};
+use crate::parse::{MatchResult, Parser, Stateful, StdSimd};
 use derive_more::Display;
 
 #[derive(Display)]
@@ -46,9 +46,9 @@ impl<Left: Parser, M: Parser, Right: Parser> Stateful<LeftXorRight<Left, M, Righ
         }
     }
 
-    fn parse(&mut self, byte: u8) -> MatchResult<Either<A, B>> {
+    fn parse(&mut self, bytes: StdSimd) -> MatchResult<Self::Out> {
         match self.state {
-            ParsingA => match self.a_state.parse(byte) {
+            ParsingA => match self.a_state.parse(bytes) {
                 Consumed => Consumed,
                 Parsed(a) => Parsed(A(a)),
                 Oops(a) => Oops(A(a)),
@@ -57,7 +57,7 @@ impl<Left: Parser, M: Parser, Right: Parser> Stateful<LeftXorRight<Left, M, Righ
                     None => NoMatch,
                 },
             },
-            ParsingB => match self.b_state.parse(byte) {
+            ParsingB => match self.b_state.parse(bytes) {
                 Consumed => Consumed,
                 Parsed(b) => Parsed(B(b)),
                 Oops(b) => Oops(B(b)),
@@ -66,8 +66,8 @@ impl<Left: Parser, M: Parser, Right: Parser> Stateful<LeftXorRight<Left, M, Righ
                     None => NoMatch,
                 },
             },
-            Normal => match self.a_state.parse(byte.clone()) {
-                Consumed => match self.b_state.parse(byte) {
+            Normal => match self.a_state.parse(bytes.clone()) {
+                Consumed => match self.b_state.parse(bytes) {
                     Consumed => Consumed,
                     Parsed(b) | Oops(b) => {
                         self.parsed_b = Some(b);
@@ -79,7 +79,7 @@ impl<Left: Parser, M: Parser, Right: Parser> Stateful<LeftXorRight<Left, M, Righ
                         Consumed
                     }
                 },
-                Parsed(a) => match self.b_state.parse(byte) {
+                Parsed(a) => match self.b_state.parse(bytes) {
                     Consumed => {
                         self.parsed_a = Some(a);
                         Consumed
@@ -87,14 +87,14 @@ impl<Left: Parser, M: Parser, Right: Parser> Stateful<LeftXorRight<Left, M, Righ
                     Oops(b) => Oops(B(b)),
                     _ => Parsed(A(a)),
                 },
-                Oops(a) => match self.b_state.parse(byte) {
+                Oops(a) => match self.b_state.parse(bytes) {
                     Consumed => {
                         self.parsed_a = Some(a);
                         Consumed
                     }
                     _ => Parsed(A(a)),
                 },
-                NoMatch => match self.b_state.parse(byte) {
+                NoMatch => match self.b_state.parse(bytes) {
                     Consumed => {
                         self.state = ParsingB;
                         Consumed

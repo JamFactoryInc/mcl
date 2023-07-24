@@ -1,7 +1,7 @@
 use std::intrinsics::{likely, unlikely};
 use std::ops::{BitAnd, Index, Rem, Sub};
 use crate::grammar::literals::uuid::UUIDState::*;
-use crate::parse::{MatchResult, Stateful};
+use crate::parse::{MatchResult, Stateful, StdSimd};
 use std::simd::{Mask, mask8x8, SimdOrd, SimdPartialEq, SimdUint, ToBitMask, u8x8};
 
 enum UUIDState {
@@ -53,7 +53,7 @@ impl Stateful for UUIDParserState {
         }
     }
 
-    fn parse(&mut self, byte: u8) -> MatchResult<Self::Out> {
+    fn parse(&mut self, bytes: StdSimd) -> MatchResult<Self::Out> {
         match self.state {
             Hex1 => {
 

@@ -34,9 +34,9 @@ impl<_1: Parser, _2: Parser> Stateful<BinarySequence<_1, _2>> for ParserState<_1
         }
     }
 
-    fn parse(&mut self, byte: u8) -> MatchResult<BinarySequence<_1, _2>> {
+    fn parse(&mut self, bytes: StdSimd) -> MatchResult<Self::Out> {
         match self.state {
-            State::First => match self.state_1.parse(byte) {
+            State::First => match self.state_1.parse(bytes) {
                 Consumed => Consumed,
                 Oops(first) | Parsed(first) => {
                     self.parsed_1 = Some(first);
@@ -45,7 +45,7 @@ impl<_1: Parser, _2: Parser> Stateful<BinarySequence<_1, _2>> for ParserState<_1
                 }
                 NoMatch => NoMatch,
             },
-            State::Second => match self.state_2.parse(byte) {
+            State::Second => match self.state_2.parse(bytes) {
                 Consumed => Consumed,
                 Oops(second) => {
                     self.state = State::Second;

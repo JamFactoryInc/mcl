@@ -41,9 +41,9 @@ impl<A: Parser, B: Parser> Stateful<Either<A, B>> for ParserState<A, B> {
         }
     }
 
-    fn parse(&mut self, byte: u8) -> MatchResult<Either<A, B>> {
+    fn parse(&mut self, bytes: StdSimd) -> MatchResult<Self::Out> {
         match self.state {
-            ParsingA => match self.a_state.parse(byte) {
+            ParsingA => match self.a_state.parse(bytes) {
                 Consumed => Consumed,
                 Parsed(a) => Parsed(A(a)),
                 Oops(a) => Oops(A(a)),
@@ -52,7 +52,7 @@ impl<A: Parser, B: Parser> Stateful<Either<A, B>> for ParserState<A, B> {
                     None => NoMatch,
                 },
             },
-            ParsingB => match self.b_state.parse(byte) {
+            ParsingB => match self.b_state.parse(bytes) {
                 Consumed => Consumed,
                 Parsed(b) => Parsed(B(b)),
                 Oops(b) => Oops(B(b)),
@@ -61,8 +61,8 @@ impl<A: Parser, B: Parser> Stateful<Either<A, B>> for ParserState<A, B> {
                     None => NoMatch,
                 },
             },
-            Normal => match self.a_state.parse(byte.clone()) {
-                Consumed => match self.b_state.parse(byte) {
+            Normal => match self.a_state.parse(bytes.clone()) {
+                Consumed => match self.b_state.parse(bytes) {
                     Consumed => Consumed,
                     Parsed(b) | Oops(b) => {
                         self.parsed_b = Some(b);
@@ -74,7 +74,7 @@ impl<A: Parser, B: Parser> Stateful<Either<A, B>> for ParserState<A, B> {
                         Consumed
                     }
                 },
-                Parsed(a) => match self.b_state.parse(byte) {
+                Parsed(a) => match self.b_state.parse(bytes) {
                     Consumed => {
                         self.parsed_a = Some(a);
                         Consumed
@@ -82,14 +82,14 @@ impl<A: Parser, B: Parser> Stateful<Either<A, B>> for ParserState<A, B> {
                     Oops(b) => Oops(B(b)),
                     _ => Parsed(A(a)),
                 },
-                Oops(a) => match self.b_state.parse(byte) {
+                Oops(a) => match self.b_state.parse(bytes) {
                     Consumed => {
                         self.parsed_a = Some(a);
                         Consumed
                     }
                     _ => Parsed(A(a)),
                 },
-                NoMatch => match self.b_state.parse(byte) {
+                NoMatch => match self.b_state.parse(bytes) {
                     Consumed => {
                         self.state = ParsingB;
                         Consumed

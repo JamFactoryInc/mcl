@@ -17,7 +17,7 @@ pub type StdMask = <Simd<u8, SIMD_LANE_SIZE> as SimdPartialEq>::Mask;
 pub trait Stateful {
     type Out;
     fn new() -> Self;
-    fn parse(&mut self, bytes: u8x8) -> MatchResult<Self::Out>;
+    fn parse(&mut self, bytes: StdSimd) -> MatchResult<Self::Out>;
 }
 pub struct ParserState<T> {
     state: usize,

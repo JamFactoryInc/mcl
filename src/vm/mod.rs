@@ -1,5 +1,5 @@
 use crate::grammar::entity::EntitySelector;
-use crate::translate::bytecode::Instr;
+use crate::representation::bytecode::Instr;
 
 pub type Function = usize;
 pub enum Variable<'a> {

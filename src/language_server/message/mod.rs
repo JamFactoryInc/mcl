@@ -1,4 +1,4 @@
-use jsonrpc_core::serde::{Deserialize, Deserializer, Serialize, Serializer};
+use jsonrpc_core::serde::{Serialize, Serializer};
 use lsp_types::{OneOf};
 
 pub trait Notification {

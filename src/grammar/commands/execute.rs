@@ -1,5 +1,6 @@
-enum ExecuteSubcommands {
-    Align,
+
+pub enum Cmds {
+    Align(),
     Anchored,
     As,
     At,
@@ -15,14 +16,22 @@ enum ExecuteSubcommands {
     Unless,
 }
 
-enum ExecuteIfConditions {
-    Biome,
-    Block,
-    Blocks,
-    Data,
-    Dimension,
-    Entity,
-    Loaded,
-    Predicate,
-    Score,
+pub mod r#if {
+    pub enum Cmds {
+        Biome,
+        Block,
+        Blocks,
+        Data,
+        Dimension,
+        Entity,
+        Loaded,
+        Predicate,
+        Score,
+    }
+
+    pub mod score {
+        pub enum Cmds {
+            Matches
+        }
+    }
 }

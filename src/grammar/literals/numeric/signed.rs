@@ -1,5 +1,5 @@
 use crate::grammar::literals::numeric::unsigned::UnsignedParserState;
-use crate::parse::{MatchResult, Parser, Stateful};
+use crate::parse::{MatchResult, Parser, Stateful, StdSimd};
 use std::marker::PhantomData;
 use crate::parse::MatchResult::NoMatch;
 
@@ -32,20 +32,20 @@ impl<T: From<u64>, const HALF: u64> Stateful for SignedParserState<T, HALF> {
         }
     }
 
-    fn parse(&mut self, byte: u8) -> MatchResult<T> {
+    fn parse(&mut self, bytes: StdSimd) -> MatchResult<Self::Out> {
         match self.state {
-            SignedState::First => match byte {
+            SignedState::First => match bytes {
                 b'-' => MatchResult::consume(|| self.state = SignedState::Neg),
                 b'0'..=b'9' => {
                     self.state = SignedState::Pos;
-                    self.state_t_pos.parse(byte)
+                    self.state_t_pos.parse(bytes)
                         .bubble(|ok| ok as T)
                 }
                 _ => NoMatch("invalid leading character in signed number literal"),
             },
-            SignedState::Pos => self.state_t_pos.parse(byte)
+            SignedState::Pos => self.state_t_pos.parse(bytes)
                 .bubble(|ok| ok as T),
-            SignedState::Neg => self.state_t_pos.parse(byte)
+            SignedState::Neg => self.state_t_pos.parse(bytes)
                 .bubble(|ok| -(ok as T)),
         }
     }

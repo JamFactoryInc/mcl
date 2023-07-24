@@ -1,5 +1,5 @@
 use crate::parse::MatchResult::{Consumed, NoMatch, Parsed};
-use crate::parse::{MatchResult, Parser, Stateful};
+use crate::parse::{MatchResult, Parser, Stateful, StdSimd};
 use std::intrinsics::likely;
 use std::marker::PhantomData;
 use std::simd::u8x8;
@@ -21,7 +21,7 @@ impl<T, const MAX: u64> Stateful for UnsignedParserState<T, MAX> {
         }
     }
 
-    fn parse(&mut self, bytes: u8x8) -> MatchResult<T> {
+    fn parse(&mut self, bytes: StdSimd) -> MatchResult<Self::Out> {
         let prev = self.number.clone();
         bytes.ascii_hex_digit()
 

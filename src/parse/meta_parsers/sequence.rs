@@ -1,4 +1,4 @@
-use crate::parse::{MatchResult, Parser, Stateful};
+use crate::parse::{MatchResult, Parser, Stateful, StdSimd};
 
 pub enum NEnum<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z> {
     Nil,
@@ -111,37 +111,7 @@ impl<
 
     fn parse(
         &mut self,
-        byte: u8,
-    ) -> MatchResult<
-        Sequence<
-            SIZE,
-            A,
-            B,
-            C,
-            D,
-            E,
-            F,
-            G,
-            H,
-            I,
-            J,
-            K,
-            L,
-            M,
-            N,
-            O,
-            P,
-            Q,
-            R,
-            S,
-            T,
-            U,
-            V,
-            W,
-            X,
-            Y,
-            Z,
-        >,
-    > {
+        bytes: StdSimd,
+    ) -> MatchResult<Self::Out> {
     }
 }

@@ -108,7 +108,7 @@ trait UnsignedPrimitive {
 // pub struct Namespace { name: String }
 // pub struct Resource { is_tag: bool, namespace: Namespace, path: Vec<McIdentifier> }
 //
-// /// `[_.-A-z0-9]+`
+// /// `[_.\-A-z0-9]+`
 // #[derive(Display)]
 // pub struct McIdentifier {
 //     str: String

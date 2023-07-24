@@ -1,31 +1,50 @@
 use std::iter::Iterator;
-use std::ops::{Add, BitAnd, BitOr, Div, Mul, Rem, Sub};
-use std::simd::{Simd, SimdInt, SimdPartialEq, SimdUint, ToBitMask};
+use std::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Rem, Sub};
+use std::simd::{Simd, SimdInt, SimdPartialEq, SimdPartialOrd, SimdUint, ToBitMask};
 use crate::parse::{SIMD_LANE_SIZE, StdMask, StdSimd};
-use crate::util::ascii_simd::{ALPHA_BLOCK, ALPHA_BLOCK_SIZE, ALPHA_LENGTH, DEC_ORDERS, ZERO};
+use crate::util::ascii_simd::{ALPHA_BLOCK, ALPHA_BLOCK_SIZE, ALPHA_LENGTH, DEC_ORDERS, JUSTIFIED_Z, LOWER_A, UPPER_A, ZERO};
 use crate::util::ascii_simd::mask::MaskAsciiUtils;
 
 
 pub trait SimdUtils {
-    /// justifies a range of ascii characters to the given index
+    /// brings the simd vector's lower bound to have the ascii value of `NEW_MIN` given the `MIN`
+    /// and sets outlying characters to 0
     ///
-    /// e.g. `justify_range<0, b'a', b'z'>` behaves as:
+    /// e.g. `justify_range<12, b'a', b'z'>` behaves as:
     /// ```
-    /// b'a' => 0
-    /// b'j' => 9
+    /// b'a' => (12 + b'a' - b'a') = 12
+    /// b'j' => (12 + b'j' - b'a') = 21
     /// b'1' => 0
+    fn justify_range<const NEW_MIN: u8, const MIN: u8, const MAX_INCLUSIVE: u8> (&self) -> StdSimd;
+
+    /// brings the simd vector's lower bound to have the ascii value of `NEW_MIN` given the `MIN`
+    ///
+    /// e.g. `justify<12, b'a', b'z'>` behaves as:
     /// ```
-    /// sets outlying characters to 0
-    fn justify_range<const NEW_LEFT_OFFSET: u8, const MIN: u8, const MAX_INCLUSIVE: u8> (&self) -> StdSimd;
+    /// b'a' => (12 + b'a' - b'a') = 12
+    /// b'j' => (12 + b'j' - b'a') = 21
+    /// b'1' => (12 + b'1' - b'a') = -36
+    fn justify<const NEW_MIN: u8, const MIN: u8> (&self) -> StdSimd;
 
-    fn justify<const NEW_LEFT_OFFSET: u8, const MIN: u8> (&self) -> StdSimd;
-
+    /// brings the given simd vector's lower bound to equal zero, and zeroes any lanes that are outside the range
     fn justify_range_to_zero<const MIN: u8, const MAX_INCLUSIVE: u8>(&self) -> StdSimd;
 
+    /// a fancy way of writing
+    /// ```
+    /// self.sub(StdSimd::splat(MIN))
+    /// ```
+    /// brings the given simd vector's lower bound to equal zero
     fn justify_to_zero<const MIN: u8>(&self) -> StdSimd;
 
+    /// returns a tuple containing:
+    ///
+    /// - a simd vector representing the found digits
+    /// - a mask representing which lanes were valid hexadecimal digits
     fn parse_base_16(&self) -> (StdSimd, StdMask);
 
+    /// returns a tuple containing:
+    /// - a simd vector representing the found digits
+    /// - a mask representing which lanes were valid decimal digits
     fn parse_base_10(&self) -> (StdSimd, StdMask);
 
     fn concat_base_n<const BASE: u32>(&self, mask: StdMask) -> (u32, u32);
@@ -66,38 +85,75 @@ pub trait SimdUtils {
     /// e.g.
     /// ```
     /// <1, 2, 3, 4>.use_and_add(2, &[10, 11]) -> <3, 4, 10, 11>
-    fn use_and_add(&self, used: usize, new_values: &[u8]) -> StdSimd;
+    fn use_and_add(&self, new_values: &[u8]) -> StdSimd;
 
+    /// returns a mask representing which lanes are within the contiguous ascii range MIN-MAX (inclusive)
     fn range<const MIN: u8, const MAX_INCLUSIVE: u8>(&self) -> StdMask;
 
+    /// returns a mask representing which lanes are valid A-z alpha characters
     fn alpha(&self) -> StdMask;
 
+    /// returns a mask representing which lanes are valid A-z or 0-9 character
+    fn alpha_numeric(self: StdSimd) -> StdMask;
+
+    /// returns a mask representing which lanes are valid a-z alpha characters
     fn lower(&self) -> StdMask;
 
+    /// returns a mask representing which lanes are valid A-Z alpha characters
     fn upper(&self) -> StdMask;
 
+    /// returns a mask representing which lanes are valid A-F hexadecimal digits
     fn hex_alpha(&self) -> StdMask;
-    
+
+    /// returns a mask representing which lanes are valid 0-F hexadecimal digits
     fn hex(&self) -> StdMask;
-    
+
+    /// returns a mask representing which lanes are valid 0-9 digits
     fn digit(&self) -> StdMask;
 
-    fn sequence<const chars: [u8; 8]>(&self) -> StdMask;
+    /// returns a mask representing the lanes that matched the given character sequence
+    fn sequence<const chars: [u8; SIMD_LANE_SIZE]>(&self) -> StdMask;
 
+    /// returns a mask representing the lanes that matched the desired character
     fn find<const CHAR: u8>(&self) -> StdMask;
 
+    /// returns the number of chars before (aka the index of) the desired char
+    ///
+    /// returns 8 if it is not found
     fn index_of<const CHAR: u8>(&self) -> usize;
+
+    /// sets the lanes to zero where the given mask is false
+    fn mask(&self, mask: StdMask) -> StdSimd;
+
+    /// merges the ranges A-Z and a-z to both have a=1
+    fn flatten_alpha(&self) -> StdSimd;
+
+    /// merges the ranges A-Z and a-z to both have a=0
+    fn flatten_alpha_zero(&self) -> StdSimd;
+
+    /// matches whitespace (actually just control characters or space)
+    fn whitespace(&self) -> StdMask;
+
+    /// only matches whitespace
+    fn slow_whitespace(&self) -> StdMask;
+
+    /// gets a mask representing the position of word chars (chars in identifiers)
+    fn word(&self) -> StdMask;
+
+    /// gets a mask representing the position of non-word chars (chars that are not connected to identifiers)
+    fn non_word(&self) -> StdMask;
 }
+
 impl SimdUtils for StdSimd {
     #[inline]
-    fn justify_range<const NEW_LEFT_OFFSET: u8, const MIN: u8, const MAX_INCLUSIVE: u8> (&self) -> StdSimd {
-        self.add(StdSimd::splat(NEW_LEFT_OFFSET - MIN))
+    fn justify_range<const NEW_MIN: u8, const MIN: u8, const MAX_INCLUSIVE: u8> (&self) -> StdSimd {
+        self.add(StdSimd::splat(NEW_MIN - MIN))
             .bitand(self.range::<MIN, MAX_INCLUSIVE>())
     }
 
     #[inline]
-    fn justify<const NEW_LEFT_OFFSET: u8, const MIN: u8> (&self) -> StdSimd {
-        self.add(StdSimd::splat(NEW_LEFT_OFFSET - MIN))
+    fn justify<const NEW_MIN: u8, const MIN: u8> (&self) -> StdSimd {
+        self.add(StdSimd::splat(NEW_MIN - MIN))
     }
 
     #[inline]
@@ -113,29 +169,32 @@ impl SimdUtils for StdSimd {
 
     #[inline]
     fn parse_base_16(&self) -> (StdSimd, StdMask) {
-        let digit_mask = self.digit();
-        let alpha_mask = self.hex_alpha();
+        // flatten A-Z and a-z to b'A' == b'a' == 10 via modulus
+        let hex_values = self.rem(StdSimd::splat(b'a' - 10))
+            .rem(StdSimd::splat(b'A' - 10));
+        // get a mask representing values < 0xA i.e. values that were below A-F and should be removed
+        let bad_hex_mask = hex_values.simd_lt(StdSimd::splat(0xA));
+        // also flatten 0-9 into the vector
+        let values = hex_values.rem(StdSimd::splat(b'0'));
 
-        (
-            digit_mask.select(
-                // if it's a number, justify to int value
-                self.justify_to_zero::<b'0'>(),
-                // if it's an alpha (a-f or A-F), mod 32 to standardize upper and lower case,
-                // then add 8 to bring b'a' % 32 to 10
-                // otherwise make it zero
-                self.rem(ALPHA_BLOCK_SIZE)
-                    .justify::<{ 0xA - 1 }, { b'a' % 32 }>()
-                    .bitand(alpha_mask.to_int().cast())
-            ),
-            digit_mask.bitor(alpha_mask)
+        let mask = bad_hex_mask.bitor(
+            // get a mask representing values > 0xF i.e. values that were above 0-F and should be removed
+            values.simd_gt(StdSimd::splat(0xF))
         )
+            // the mask is now true if the value is bad
+            // now we get a mask representing whether the value was originally in a valid range
+            .bitor(self.simd_le(StdSimd::splat(0xF)))
+            // and finally invert the mask so true == valid
+            .simd_ne(StdMask::from_array([true; SIMD_LANE_SIZE]));
+
+        (values, mask)
     }
 
     #[inline]
     fn parse_base_10(&self) -> (StdSimd, StdMask) {
         let digit_mask = self.digit();
         (
-            self.sub(ZERO).bitand(digit_mask.to_int().cast()),
+            self.sub(ZERO).mask(digit_mask),
             digit_mask
         )
     }
@@ -207,11 +266,12 @@ impl SimdUtils for StdSimd {
     }
 
     #[inline]
-    fn use_and_add(&self, used: usize, new_values: &[u8]) -> StdSimd {
+    fn use_and_add(&self, new_values: &[u8]) -> StdSimd {
         // set the last n values to the contents of the given slice
         let mut vals = [0u8; SIMD_LANE_SIZE];
-        vals[(SIMD_LANE_SIZE - &used)..].copy_from_slice(new_values);
-        let (self_rotated, inverse_mask) = self.use_amount(used).do_zero();
+        let used_amount = new_values.len();
+        vals[(SIMD_LANE_SIZE - &used_amount)..].copy_from_slice(new_values);
+        let (self_rotated, inverse_mask) = self.use_amount(used_amount).do_zero();
 
         self_rotated.add(
             StdSimd::from_array(vals)
@@ -221,8 +281,13 @@ impl SimdUtils for StdSimd {
 
     #[inline]
     fn range<const MIN: u8, const MAX_INCLUSIVE: u8>(&self) -> StdMask {
-        self.self_ge(StdSimd::splat(MIN))
-            .bitand(self.self_le(StdSimd::splat(MAX_INCLUSIVE)))
+        if MIN == 0 {
+            self.self_le(StdSimd::splat(MAX_INCLUSIVE))
+        } else {
+            self.self_ge(StdSimd::splat(MIN))
+                .bitand(self.self_le(StdSimd::splat(MAX_INCLUSIVE)))
+        }
+
     }
 
     #[inline]
@@ -232,9 +297,24 @@ impl SimdUtils for StdSimd {
             // AND
             .bitand(
                 // flatten the ascii blocks to 0-31
-                self.rem(ALPHA_BLOCK_SIZE)
+                self.flatten_alpha_zero()
                     // make sure the flattened values are from 1-26 (a-z)
-                    .range::<1, ALPHA_LENGTH>()
+                    .range::<0, ALPHA_LENGTH>()
+            )
+    }
+
+    #[inline]
+    fn alpha_numeric(self: StdSimd) -> StdMask {
+        // make sure the original values are at least b'0'
+        self.simd_ge(ZERO)
+            .bitand(
+                // flatten a-z and A-Z so b'A' == b'a' == 0 (b'z' == 25)
+                // then flatten 0-9 so b'9' == 25 (same as b'z')
+                self.rem(LOWER_A)
+                    .rem(UPPER_A)
+                    .rem(StdSimd::splat(ALPHA_LENGTH - 10))
+                    // finally, make sure all values are at most 25 (b'z' b'Z' or b'9'
+                    .simd_le(JUSTIFIED_Z)
             )
     }
 
@@ -273,23 +353,60 @@ impl SimdUtils for StdSimd {
     }
 
     #[inline]
-    fn sequence<const CHARS: [u8; 8]>(&self) -> StdMask {
+    fn sequence<const CHARS: [u8; SIMD_LANE_SIZE]>(&self) -> StdMask {
         self.self_eq(StdSimd::from_array(CHARS))
     }
 
+    #[inline]
     fn find<const CHAR: u8>(&self) -> StdMask {
         self.simd_eq(StdSimd::splat(CHAR))
     }
 
-    /// returns the number of chars before (aka the index of) the desired char
-    ///
-    /// returns 8 if it is not found
+    #[inline]
     fn index_of<const CHAR: u8>(&self) -> usize {
         // set not-equal values to 0
         self.simd_eq(StdSimd::splat(CHAR))
             // the first n zeros will be the index
-            .to_bitmask()
-            .leading_zeros() as usize
+            .count_misses()
+    }
+
+    #[inline]
+    fn mask(&self, mask: StdMask) -> StdSimd {
+        self.bitand(mask.to_int().cast())
+    }
+
+    #[inline]
+    fn flatten_alpha(&self) -> StdSimd {
+        self.rem(ALPHA_BLOCK_SIZE)
+    }
+
+    #[inline]
+    fn flatten_alpha_zero(&self) -> StdSimd {
+        self.flatten_alpha()
+            .justify_to_zero::<{ b'a' % ALPHA_BLOCK_SIZE }>()
+    }
+
+    #[inline]
+    fn whitespace(&self) -> StdMask {
+        self.simd_le(StdSimd::splat(b' '))
+    }
+
+    #[inline]
+    fn slow_whitespace(&self) -> StdMask {
+        // 9 | 10 | 13 | 32
+        self.simd_ge(StdSimd::splat(b'\t'))
+            .bitand(self.simd_le(StdSimd::splat(b'\r')))
+            .bitor(self.simd_eq(StdSimd::splat(b' ')))
+    }
+
+    #[inline]
+    fn word(&self) -> StdMask {
+        self.alpha_numeric().bitor(StdSimd::splat(b'_'))
+    }
+
+    #[inline]
+    fn non_word(&self) -> StdMask {
+        self.alpha().bitor(StdSimd::splat(b'_'))
     }
 }
 

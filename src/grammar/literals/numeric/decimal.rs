@@ -1,6 +1,6 @@
 use crate::grammar::literals::numeric::unsigned::U64;
 use crate::parse::MatchResult::*;
-use crate::parse::{MatchResult, Parser, Stateful};
+use crate::parse::{MatchResult, Parser, Stateful, StdSimd};
 
 enum UnsignedFloatState {
     Before,
@@ -30,11 +30,11 @@ impl Stateful for FloatParserState {
         }
     }
 
-    fn parse(&mut self, byte: u8) -> MatchResult<UDecimal> {
+    fn parse(&mut self, bytes: StdSimd) -> MatchResult<Self::Out> {
         match self.state {
              UnsignedFloatState::Before => self.parser.parse()
                 .bubble_or_get(|num, result| {
-                    if byte == b'.' {
+                    if bytes == b'.' {
                         self.parsed_first = num;
                         self.parser = <U64 as Parser>::State::new();
                         self.state = UnsignedFloatState::After;
@@ -74,12 +74,12 @@ impl Stateful for SignedFloatParserState {
         }
     }
 
-    fn parse(&mut self, byte: u8) -> MatchResult<Decimal> {
+    fn parse(&mut self, bytes: StdSimd) -> MatchResult<Self::Out> {
         match self.state {
-            SignedFloatState::First => match byte {
+            SignedFloatState::First => match bytes {
                 b'0'..=b'9' => {
                     self.state = SignedFloatState::Before;
-                    self.parser.parse(byte)
+                    self.parser.parse(bytes)
                         .expect_consumed()
                 }
                 b'-' => {
@@ -91,7 +91,7 @@ impl Stateful for SignedFloatParserState {
             },
             SignedFloatState::Before => self.parser.parse()
                 .bubble_or_get(|num, result| {
-                    if byte == b'.' {
+                    if bytes == b'.' {
                         self.parsed_first = num;
                         self.parser = <U64 as Parser>::State::new();
                         self.state = SignedFloatState::After;
