@@ -4,7 +4,94 @@ use proc_macro::*;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter, Write as _};
 
-#[proc_macro]
+/// # field binding
+///
+/// Each matching function below has an associated output type that can be bound to a field
+/// To bind a matching function to a field, use `@some_field`, followed by the matching function
+///
+/// Below, each matching function has its associated type annoteded after `->`
+///
+/// # matching functions:
+/// ```_
+///
+/// // matches at least one whitespace character (including newline)
+/// #whitespace -> ()
+/// // matches any alpha character
+/// #alpha -> u8
+/// // matches any lowercase alpha character
+/// #lower -> u8
+/// // matches any lowercase alpha character
+/// #upper -> u8
+/// // matches any alpha character or 0-9 digit
+/// #alphanumeric -> u8
+/// // matches any alphanumeric character or _
+/// #ident -> u8
+/// // matches any
+/// #numeric -> u8
+/// #hex -> u8
+/// #digit -> u8
+/// #i64 -> i64
+/// #i32 -> i32
+/// #i16 -> i16
+/// #u8 -> u8
+/// #uuid -> u128
+///
+/// #either -> Optional<A> <A> #xor -> Optional<B> <B>
+/// #either <A> #xor <A>
+/// #either <A> #or <B>
+/// #left <A> #middle <B> #right <C>
+///
+/// #option <A> ->
+///
+/// #repeat <A> -> Vec<A>
+/// // x can be any uint
+/// #repeat x <A> -> [A]
+///
+/// // indicates to use a user-defined matching function
+/// #SomeType -> ?
+///
+/// ```
+///
+/// below, `any` represents a variant. A variant can be:
+/// - a literal string
+/// - a matching function
+///
+/// usage:
+/// ```_
+/// // Takes n variants
+/// // the `#as` indicates what
+/// #deserialize SomeType #as "some name" #in "some.context":
+///     // required variant
+///     //  if an error is| if text completion is expected
+///     //  encountered   |
+///     //  vvvvvvvvvvvvvv vvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+///     @some_field any -> "some error" [.."some text", ]
+///     //                               ^^^^^^^^^^^^^
+///     //                               this means any initial overlap between the consumed value and
+///     //                               "some text" should be removed
+///
+///     // contained variant is not required
+///     // takes 1 variant
+///     #optional: any
+///     // at least one of the enclosed variants must match (at least one #or must follow)
+///     #either
+///         #sequence
+///
+///         #end
+///     #or
+///         any
+///     #end
+///     #either
+///         any
+///     #and
+///         any
+///     #or
+///         any
+///     #end
+///     #repeat
+/// #end
+///
+#[proc_macro_derive()]
 pub fn enum_parser(input: TokenStream) -> TokenStream {
     let src = input.to_string();
     let mut out_src = String::new();

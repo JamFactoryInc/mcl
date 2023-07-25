@@ -10,3 +10,4 @@ proc-macro = true
 
 [dependencies]
 quote = "1.0"
+text_tools = { path = "./text_tools"}
